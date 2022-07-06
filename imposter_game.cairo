@@ -1,8 +1,15 @@
 %lang starknet
 
 from starkware.cairo.common.cairo_builtins import HashBuiltin
-from starkware.cairo.common.math import assert_lt
+from starkware.cairo.common.math import assert_lt, assert_le
 from starkware.cairo.common.bool import TRUE
+
+###########
+# CONSTANTS
+###########
+
+const MIN_PLAYERS = 4
+const MAX_PLAYERS = 1
 
 #########
 # STRUCTS
@@ -19,9 +26,12 @@ end
 # STORAGE VARS
 ##############
 
-# Max of 10 players
 @storage_var
 func players_hash(index : felt) -> (hash : felt):
+end
+
+@storage_var
+func player_count() -> (count : felt):
 end
 
 @storage_var
@@ -84,6 +94,8 @@ func join_game{
         join_game(saltedHashAddress, index + 1)
     else:
         players_hash.write(index, saltedHashAddress)
+        let (count) = player_count.read()
+        player_count.write(count + 1)
     end
 
     return ()
@@ -100,7 +112,11 @@ func start_game{
     attackDelayMerkleRoot : felt, 
     doNothingMerkleRoot : felt
 ):
-    # TODO check that appropriate number of players have joined before starting game
+    let (count) = player_count.read()
+    with_attr error_message("Not enough players"):
+        assert_le(MIN_PLAYERS, count)
+    end
+
     merkle_roots.write(
         MerkleRoots(
             impostersMerkleRoot=impostersMerkleRoot,
