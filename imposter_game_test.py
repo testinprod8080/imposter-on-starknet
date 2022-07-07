@@ -78,9 +78,6 @@ async def test_success_points_collected():
     await contract.join_game(saltedHashAddress=0x68650c6c5e, index=0).invoke()
     await contract.join_game(saltedHashAddress=0x68650c6c5f, index=3).invoke()
 
-    # Check that players have joined
-    players = await contract.view_players_hash().call()
-
     # Start the game
     await contract.start_game(
       impostersMerkleRoot=0x68650c6c5b,
@@ -90,8 +87,8 @@ async def test_success_points_collected():
     ).invoke()
 
     # Collect points
-    await contract.do_nothing(actionProof=0x68650c6c5c, actionHash=3, playerProof=1, playerHash=1).invoke()
-    await contract.do_nothing(actionProof=0x68650c6c5c, actionHash=3, playerProof=0x68650c6c5b, playerHash=1).invoke()
+    await contract.complete_task(actionProof=0x68650c6c5c, actionHash=3, playerProof=1, playerHash=1).invoke()
+    await contract.complete_task(actionProof=0x68650c6c5c, actionHash=3, playerProof=0x68650c6c5b, playerHash=1).invoke()
 
     # Check number of total points
     total_points = await contract.view_total_points().call()

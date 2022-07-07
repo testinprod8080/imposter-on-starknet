@@ -187,11 +187,8 @@ end
 # effects: 
 #   - doing a task increases the total points, unless imposter
 #   - takes up two turns
-# @external
-# func do_task()
-
 @external
-func do_nothing{
+func complete_task{
     syscall_ptr : felt*,
     pedersen_ptr : HashBuiltin*,
     range_check_ptr,
@@ -213,6 +210,9 @@ func do_nothing{
 
     return ()
 end
+
+# @external
+# func do_action()
 
 ###########
 # INTERNALS
