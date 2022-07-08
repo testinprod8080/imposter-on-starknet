@@ -15,6 +15,8 @@ CONTRACT_FILE = os.path.join(TEST_DIR, "./imposter_game.cairo")
 FALSE = 0
 TRUE = 1
 
+MAX_POINTS = 3
+
 COMPLETE_TASK_ACTION_TYPE = 3
 
 ###########
@@ -28,6 +30,8 @@ PLAYER4 = 0x68650c6c5f
 
 NONIMPOSTERMERKLEROOT = 0x68650c6c5b
 COMPLETETASKROOT = 0x68650c6c5c
+
+GAMESTATE_ENDED = 3
 
 ############
 # TEST SETUP
@@ -119,7 +123,7 @@ async def started_game(join_all_players):
 #         ).invoke()
 
 @pytest.mark.asyncio
-async def test_success_nonimposter_adds_points(started_game):
+async def test_success_nonimposters_win(started_game):
     contract = started_game
 
     # ROUND 1
@@ -195,4 +199,8 @@ async def test_success_nonimposter_adds_points(started_game):
     assert total_points.result.total_points == 1
     await contract.end_round().invoke()
     total_points = await contract.view_total_points().call()
-    assert total_points.result.total_points == 4
+    assert total_points.result.total_points == MAX_POINTS
+
+    # Non imposters win
+    state = await contract.view_game_state().call()
+    assert state.result.gameState == GAMESTATE_ENDED

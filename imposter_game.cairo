@@ -10,7 +10,10 @@ from starkware.cairo.common.bool import TRUE, FALSE
 ###########
 
 const MIN_PLAYERS = 4
+
+# TODO make configurable
 const MAX_PLAYERS = 4
+const MAX_POINTS = 3
 
 #######
 # ENUMS
@@ -128,7 +131,9 @@ func view_players{
     syscall_ptr : felt*,
     pedersen_ptr : HashBuiltin*,
     range_check_ptr,
-}() -> (players : (felt, felt, felt ,felt)):
+}() -> (
+    players : (felt, felt, felt ,felt)
+):
     let (player0) = players.read(0)
     let (player1) = players.read(1)
     let (player2) = players.read(2)
@@ -146,7 +151,9 @@ func view_player_count{
     syscall_ptr : felt*,
     pedersen_ptr : HashBuiltin*,
     range_check_ptr,
-}() -> (player_count : felt):
+}() -> (
+    player_count : felt
+):
     let (count) = player_count.read()
     return (count)
 end
@@ -156,9 +163,23 @@ func view_total_points{
     syscall_ptr : felt*,
     pedersen_ptr : HashBuiltin*,
     range_check_ptr,
-}() -> (total_points : felt):
+}() -> (
+    total_points : felt
+):
     let (total_points) = points_collected.read()
     return (total_points)
+end
+
+@view
+func view_game_state{
+    syscall_ptr : felt*,
+    pedersen_ptr : HashBuiltin*,
+    range_check_ptr,
+}() -> (
+    gameState : felt
+):
+    let (gameState) = game_state.read()
+    return (gameState)
 end
 
 @view
@@ -166,7 +187,11 @@ func view_round_actions{
     syscall_ptr : felt*,
     pedersen_ptr : HashBuiltin*,
     range_check_ptr,
-}(round : felt) -> (actions : (PlayerAction, PlayerAction, PlayerAction, PlayerAction)):
+}(
+    round : felt
+) -> (
+    actions : (PlayerAction, PlayerAction, PlayerAction, PlayerAction)
+):
     let (players) = view_players()
     let (action0) = actions.read(RoundKey(round, players[0]))
     let (action1) = actions.read(RoundKey(round, players[1]))
@@ -189,7 +214,10 @@ func join_game{
     syscall_ptr : felt*,
     pedersen_ptr : HashBuiltin*,
     range_check_ptr,
-}(saltedHashAddress : felt, index : felt):
+}(
+    saltedHashAddress : felt, 
+    index : felt
+):
     _validate_pre_game_actions()
 
     let (count) = player_count.read()
@@ -298,6 +326,9 @@ func end_round{
     _do_action(actions[2])
     _do_action(actions[3])
 
+    # check win conditions
+    _check_win_conditions()
+
     current_round.write(currRound + 1)
     return ()
 end
@@ -335,7 +366,9 @@ func _validate_game_actions{
     syscall_ptr : felt*,
     pedersen_ptr : HashBuiltin*,
     range_check_ptr,
-}(playerHash : felt):
+}(
+    playerHash : felt
+):
     _validate_game_started()
 
     # verify player is valid
@@ -353,7 +386,11 @@ func _is_player{
     syscall_ptr : felt*,
     pedersen_ptr : HashBuiltin*,
     range_check_ptr,
-}(playerAddr : felt) -> (isPlayer: felt):
+}(
+    playerAddr : felt
+) -> (
+    isPlayer: felt
+):
     let (players) = view_players()
     if players[0] == playerAddr:
         return (TRUE)
@@ -374,7 +411,13 @@ end
 # INTERNALS
 ###########
 
-func _merkle_verify(root : felt, proof : felt, leaf : felt) -> (valid : felt):
+func _merkle_verify(
+    root : felt, 
+    proof : felt, 
+    leaf : felt
+) -> (
+    valid : felt
+):
     # TODO replace with merkle proof verifier
     if root == proof:
         return (TRUE)
@@ -387,7 +430,12 @@ func _is_imposter{
     syscall_ptr : felt*,
     pedersen_ptr : HashBuiltin*,
     range_check_ptr,
-}(playerProof : felt, playerLeaf : felt) -> (isImposter : felt):
+}(
+    playerProof : felt, 
+    playerLeaf : felt
+) -> (
+    isImposter : felt
+):
     let (merkleRoots) = merkle_roots.read()
     let (verified) = _merkle_verify(merkleRoots.notImpostersMerkleRoot, playerProof, playerLeaf)
     if verified == TRUE:
@@ -401,7 +449,12 @@ func _is_complete_task_action{
     syscall_ptr : felt*,
     pedersen_ptr : HashBuiltin*,
     range_check_ptr,
-}(actionProof : felt, actionLeaf : felt) -> (canCollect : felt):
+}(
+    actionProof : felt, 
+    actionLeaf : felt
+) -> (
+    canCollect : felt
+):
     let (merkleRoots) = merkle_roots.read()
     let (verified) = _merkle_verify(merkleRoots.taskMerkleRoot, actionProof, actionLeaf)
     return (verified)
@@ -411,7 +464,9 @@ func _do_action{
     syscall_ptr : felt*,
     pedersen_ptr : HashBuiltin*,
     range_check_ptr,
-}(action: PlayerAction):
+}(
+    action: PlayerAction
+):
     # if player is an imposter, do nothing
     let (isImposter) = _is_imposter(action.playerProof, action.playerHash)
     if isImposter == TRUE:
@@ -434,7 +489,26 @@ func _increment_points{
     range_check_ptr,
 }():
     let (currTotalPoints) = points_collected.read()
-    points_collected.write(currTotalPoints + 1)
+    if currTotalPoints == MAX_POINTS:
+        return ()
+    else:
+        points_collected.write(currTotalPoints + 1)
+    end
+    
+    return ()
+end
+
+func _check_win_conditions{
+    syscall_ptr : felt*,
+    pedersen_ptr : HashBuiltin*,
+    range_check_ptr,
+}():
+    let (currTotalPoints) = points_collected.read()
+    if currTotalPoints == MAX_POINTS:
+        game_state.write(GameStateEnum.ENDED)
+        return ()
+    end
+
     return ()
 end
 
