@@ -38,6 +38,7 @@ PLAYER4 = 0x68650c6c5f
 REALONESMERKLEROOT = 0x68650c6c5b
 COMPLETETASKMERKLEROOT = 0x7451
 KILLMERKLEROOT = 0xd34d
+DONOTHINGMERKLEROOT = 0x000
 
 GAMESTATE_ENDED = 3
 
@@ -260,3 +261,107 @@ async def test_success_imposter_kills(started_game):
         + players.result.players[2].state 
         + players.result.players[3].state
       ) > 0
+
+@pytest.mark.asyncio
+async def test_success_imposters_win(started_game):
+    contract = started_game
+
+    # ROUND 1
+    await contract.register_action(
+        actionType=COMPLETE_TASK_ACTION_TYPE,
+        actionProof=COMPLETETASKMERKLEROOT, 
+        actionHash=3, 
+        playerProof=REALONESMERKLEROOT, 
+        playerHash=PLAYER3
+      ).invoke()
+    await contract.register_action(
+        actionType=COMPLETE_TASK_ACTION_TYPE,
+        actionProof=COMPLETETASKMERKLEROOT, 
+        actionHash=3, 
+        playerProof=REALONESMERKLEROOT, 
+        playerHash=PLAYER2
+      ).invoke()
+    await contract.register_action(
+        actionType=COMPLETE_TASK_ACTION_TYPE,
+        actionProof=DONOTHINGMERKLEROOT, 
+        actionHash=3, 
+        playerProof=REALONESMERKLEROOT, 
+        playerHash=PLAYER4
+      ).invoke()
+    # Imposter kills
+    await contract.register_action(
+        actionType=DO_NOTHING_ACTION_TYPE,
+        actionProof=KILLMERKLEROOT, 
+        actionHash=3, 
+        playerProof=1, 
+        playerHash=PLAYER1
+      ).invoke()
+    await contract.end_round().invoke()
+
+    # ROUND 2
+    await contract.register_action(
+        actionType=COMPLETE_TASK_ACTION_TYPE,
+        actionProof=DONOTHINGMERKLEROOT, 
+        actionHash=3, 
+        playerProof=REALONESMERKLEROOT, 
+        playerHash=PLAYER3
+      ).invoke()
+    await contract.register_action(
+        actionType=COMPLETE_TASK_ACTION_TYPE,
+        actionProof=DONOTHINGMERKLEROOT, 
+        actionHash=3, 
+        playerProof=REALONESMERKLEROOT, 
+        playerHash=PLAYER2
+      ).invoke()
+    await contract.register_action(
+        actionType=COMPLETE_TASK_ACTION_TYPE,
+        actionProof=DONOTHINGMERKLEROOT, 
+        actionHash=3, 
+        playerProof=REALONESMERKLEROOT, 
+        playerHash=PLAYER4
+      ).invoke()
+    # Imposter kills
+    await contract.register_action(
+        actionType=DO_NOTHING_ACTION_TYPE,
+        actionProof=KILLMERKLEROOT, 
+        actionHash=3, 
+        playerProof=1, 
+        playerHash=PLAYER1
+      ).invoke()
+    await contract.end_round().invoke()
+
+    # ROUND 3
+    await contract.register_action(
+        actionType=COMPLETE_TASK_ACTION_TYPE,
+        actionProof=DONOTHINGMERKLEROOT, 
+        actionHash=3, 
+        playerProof=REALONESMERKLEROOT, 
+        playerHash=PLAYER3
+      ).invoke()
+    await contract.register_action(
+        actionType=COMPLETE_TASK_ACTION_TYPE,
+        actionProof=DONOTHINGMERKLEROOT, 
+        actionHash=3, 
+        playerProof=REALONESMERKLEROOT, 
+        playerHash=PLAYER2
+      ).invoke()
+    await contract.register_action(
+        actionType=COMPLETE_TASK_ACTION_TYPE,
+        actionProof=DONOTHINGMERKLEROOT, 
+        actionHash=3, 
+        playerProof=REALONESMERKLEROOT, 
+        playerHash=PLAYER4
+      ).invoke()
+    # Imposter kills
+    await contract.register_action(
+        actionType=DO_NOTHING_ACTION_TYPE,
+        actionProof=KILLMERKLEROOT, 
+        actionHash=3, 
+        playerProof=1, 
+        playerHash=PLAYER1
+      ).invoke()
+    await contract.end_round().invoke()
+
+    # Check that game ended
+    gameState = await contract.view_game_state().call()
+    assert gameState.result.gameState == GAMESTATE_ENDED

@@ -145,7 +145,7 @@ func constructor{
 }():
     game_state.write(GameStateEnum.NOTSTARTED)
     # TODO make into input
-    random_seed.write(120345)
+    random_seed.write(1203456889)
     return ()
 end
 
@@ -314,15 +314,15 @@ func register_action{
     alloc_locals
     _validate_game_started()
     _validate_player_joined(playerHash)
-    _validate_player_alive(playerHash)
+    # _validate_player_alive(playerHash)
 
-    let (isCompleteTask) = _is_complete_task_action(actionProof, actionHash)
-    let (isKillAction) = _is_kill_action(actionProof, actionHash)
-    with_attr error_message("Cannot include this action because inputs cannot be validated"):
-        local isCompleteTask = isCompleteTask
-        local isKillAction = isKillAction
-        assert_not_zero(isCompleteTask + isKillAction)
-    end
+    # let (isCompleteTask) = _is_complete_task_action(actionProof, actionHash)
+    # let (isKillAction) = _is_kill_action(actionProof, actionHash)
+    # with_attr error_message("Cannot include this action because inputs cannot be validated"):
+    #     local isCompleteTask = isCompleteTask
+    #     local isKillAction = isKillAction
+    #     assert_not_zero(isCompleteTask + isKillAction)
+    # end
 
     # Add action to current round's actions
     let (currRound) = current_round.read()
@@ -586,25 +586,46 @@ func _do_action{
     return ()
 end
 
+func _attempt_kill{
+    syscall_ptr : felt*,
+    pedersen_ptr : HashBuiltin*,
+    range_check_ptr,
+    bitwise_ptr : BitwiseBuiltin*,
+}(
+    index : felt,
+    player : felt
+):
+    alloc_locals
+
+    local nextIndex : felt
+    if index == MAX_PLAYERS - 1:
+        nextIndex = 0
+    else:
+        nextIndex = index + 1
+    end
+
+    let (selected) = players.read(index)
+    if selected.address != player:
+        if selected.state == PlayerStateEnum.ALIVE:
+            players.write(index, PlayerInfo(address=selected.address, state=PlayerStateEnum.DEAD))
+            return ()
+        else:
+            _attempt_kill(nextIndex, player)
+        end
+    else:
+        _attempt_kill(nextIndex, player)
+    end
+    return ()
+end
+
 func _kill_random_player{
     syscall_ptr : felt*,
     pedersen_ptr : HashBuiltin*,
     range_check_ptr,
     bitwise_ptr : BitwiseBuiltin*,
 }(player : felt):
-    # kill player except yourself
     let (randomNum) = _randint(MAX_PLAYERS)
-    let (selected) = players.read(randomNum - 1)
-    if selected.address != player:
-        if selected.state == PlayerStateEnum.ALIVE:
-            players.write(randomNum - 1, PlayerInfo(address=selected.address, state=PlayerStateEnum.DEAD))
-            return ()
-        else:
-            _kill_random_player(player)
-        end
-    else:
-        _kill_random_player(player)
-    end
+    _attempt_kill(randomNum, player)
     return ()
 end
 
@@ -628,16 +649,17 @@ func _check_alive_realone{
     pedersen_ptr : HashBuiltin*,
     range_check_ptr,
 }(
-    playerAddr : felt
+    player : PlayerInfo
 ) -> (
     isAliveRealOne : felt
 ):
+    alloc_locals
+    
     let (currRound) = current_round.read()
-    let (action) = actions.read(RoundKey(currRound, playerAddr))
+    let (action) = actions.read(RoundKey(currRound, player.address))
     let (isImposter) = _is_imposter(action.playerProof, action.playerHash)
-    let (index) = _get_player_index(playerAddr)
-    let (player) = players.read(index)
-    if (isImposter + player.state) == 2:
+
+    if isImposter + player.state == 0:
         return (TRUE)
     else:
         return (FALSE)
@@ -650,7 +672,6 @@ func _check_win_conditions{
     range_check_ptr,
 }():
     # Imposters win if real ones are all dead
-    get all alive players
     let (players) = view_players()
     let (player0alivereal) = _check_alive_realone(players[0])
     let (player1alivereal) = _check_alive_realone(players[1])
