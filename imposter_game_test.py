@@ -35,7 +35,7 @@ PLAYER2 = 0x68650c6c5d
 PLAYER3 = 0x68650c6c5e
 PLAYER4 = 0x68650c6c5f
 
-NONIMPOSTERMERKLEROOT = 0x68650c6c5b
+REALONESMERKLEROOT = 0x68650c6c5b
 COMPLETETASKMERKLEROOT = 0x7451
 KILLMERKLEROOT = 0xd34d
 
@@ -68,7 +68,7 @@ async def join_all_players(init_contract):
 @pytest_asyncio.fixture
 async def started_game(join_all_players):
     await join_all_players.start_game(
-      notImpostersMerkleRoot=NONIMPOSTERMERKLEROOT,
+      realOnesMerkleRoot=REALONESMERKLEROOT,
       taskMerkleRoot=COMPLETETASKMERKLEROOT,
       killMerkleRoot=KILLMERKLEROOT
     ).invoke()
@@ -90,7 +90,7 @@ async def test_fails_not_enough_players(init_contract):
     # Start the game
     with pytest.raises(Exception):
       await contract.start_game(
-        notImpostersMerkleRoot=PLAYER1,
+        realOnesMerkleRoot=PLAYER1,
         locationMerkleRoots={}
       ).invoke()
 
@@ -144,7 +144,7 @@ async def test_success_nonimposters_win(started_game):
         actionType=COMPLETE_TASK_ACTION_TYPE,
         actionProof=COMPLETETASKMERKLEROOT, 
         actionHash=3, 
-        playerProof=NONIMPOSTERMERKLEROOT, 
+        playerProof=REALONESMERKLEROOT, 
         playerHash=PLAYER3
       ).invoke()
 
@@ -180,7 +180,7 @@ async def test_success_nonimposters_win(started_game):
         actionType=COMPLETE_TASK_ACTION_TYPE,
         actionProof=COMPLETETASKMERKLEROOT, 
         actionHash=3, 
-        playerProof=NONIMPOSTERMERKLEROOT, 
+        playerProof=REALONESMERKLEROOT, 
         playerHash=PLAYER3
       ).invoke()
 
@@ -189,7 +189,7 @@ async def test_success_nonimposters_win(started_game):
         actionType=COMPLETE_TASK_ACTION_TYPE,
         actionProof=COMPLETETASKMERKLEROOT, 
         actionHash=3, 
-        playerProof=NONIMPOSTERMERKLEROOT, 
+        playerProof=REALONESMERKLEROOT, 
         playerHash=PLAYER2
       ).invoke()
 
@@ -198,7 +198,7 @@ async def test_success_nonimposters_win(started_game):
         actionType=COMPLETE_TASK_ACTION_TYPE,
         actionProof=COMPLETETASKMERKLEROOT, 
         actionHash=3, 
-        playerProof=NONIMPOSTERMERKLEROOT, 
+        playerProof=REALONESMERKLEROOT, 
         playerHash=PLAYER4
       ).invoke()
 
@@ -231,7 +231,7 @@ async def test_success_imposter_kills(started_game):
         actionType=COMPLETE_TASK_ACTION_TYPE,
         actionProof=COMPLETETASKMERKLEROOT, 
         actionHash=3, 
-        playerProof=NONIMPOSTERMERKLEROOT, 
+        playerProof=REALONESMERKLEROOT, 
         playerHash=PLAYER3
       ).invoke()
 
@@ -247,7 +247,7 @@ async def test_success_imposter_kills(started_game):
         actionType=DO_NOTHING_ACTION_TYPE,
         actionProof=KILLMERKLEROOT, 
         actionHash=3, 
-        playerProof=NONIMPOSTERMERKLEROOT, 
+        playerProof=REALONESMERKLEROOT, 
         playerHash=PLAYER2
       ).invoke()
 

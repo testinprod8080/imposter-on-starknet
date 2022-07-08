@@ -39,6 +39,12 @@ struct PlayerStateEnum:
     member DEAD : felt
 end
 
+struct WinnerEnum:
+    member INVALID : felt
+    member IMPOSTERS : felt
+    member REALONES : felt
+end
+
 #########
 # STRUCTS
 #########
@@ -62,7 +68,7 @@ end
 
 struct MerkleRoots:
     # 
-    member notImpostersMerkleRoot : felt
+    member realOnesMerkleRoot : felt
     member taskMerkleRoot : felt
     member killMerkleRoot : felt
     # member locationMerkleRoots : LocationMerkleRoots
@@ -93,6 +99,10 @@ end
 
 @storage_var
 func game_state() -> (state : felt):
+end
+
+@storage_var
+func winner() -> (winner : felt):
 end
 
 @storage_var
@@ -260,7 +270,7 @@ func start_game{
     pedersen_ptr : HashBuiltin*,
     range_check_ptr,
 }(
-    notImpostersMerkleRoot : felt, 
+    realOnesMerkleRoot : felt, 
     taskMerkleRoot : felt,
     killMerkleRoot : felt
 ):
@@ -273,7 +283,7 @@ func start_game{
 
     merkle_roots.write(
         MerkleRoots(
-            notImpostersMerkleRoot=notImpostersMerkleRoot,
+            realOnesMerkleRoot=realOnesMerkleRoot,
             taskMerkleRoot=taskMerkleRoot,
             killMerkleRoot=killMerkleRoot
         )
@@ -480,7 +490,7 @@ func _is_imposter{
     isImposter : felt
 ):
     let (merkleRoots) = merkle_roots.read()
-    let (verified) = _merkle_verify(merkleRoots.notImpostersMerkleRoot, playerProof, playerLeaf)
+    let (verified) = _merkle_verify(merkleRoots.realOnesMerkleRoot, playerProof, playerLeaf)
     if verified == TRUE:
         return (FALSE)
     else:
@@ -588,11 +598,30 @@ func _increment_points{
     return ()
 end
 
+# func _check_alive_realone{
+#     syscall_ptr : felt*,
+#     pedersen_ptr : HashBuiltin*,
+#     range_check_ptr,
+# }():
+
 func _check_win_conditions{
     syscall_ptr : felt*,
     pedersen_ptr : HashBuiltin*,
     range_check_ptr,
 }():
+    # Imposters win if real ones are all dead
+    # get all alive players
+    # let (players) = view_players()
+    # let (player0alivereal) = _check_alive_realone(players[0])
+    # let (player1alivereal) = _check_alive_realone(players[1])
+    # let (player2alivereal) = _check_alive_realone(players[2])
+    # let (player3alivereal) = _check_alive_realone(players[3])
+    # if alive_realones == 0:
+    #     game_state.write(GameStateEnum.ENDED)
+    #     return ()
+    # end
+
+    # Real Ones win if at least one is alive and max points reached
     let (currTotalPoints) = points_collected.read()
     if currTotalPoints == MAX_POINTS:
         game_state.write(GameStateEnum.ENDED)
