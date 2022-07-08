@@ -374,11 +374,7 @@ end
 # INTERNALS
 ###########
 
-func _merkle_verify{
-    syscall_ptr : felt*,
-    pedersen_ptr : HashBuiltin*,
-    range_check_ptr,
-}(root : felt, proof : felt, leaf : felt) -> (valid : felt):
+func _merkle_verify(root : felt, proof : felt, leaf : felt) -> (valid : felt):
     # TODO replace with merkle proof verifier
     if root == proof:
         return (TRUE)
