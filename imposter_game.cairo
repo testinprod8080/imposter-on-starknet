@@ -96,7 +96,19 @@ func game_state() -> (state : felt):
 end
 
 @storage_var
+func merkle_roots() -> (hash : MerkleRoots):
+end
+
+@storage_var
+func random_seed() -> (res : felt):
+end
+
+@storage_var
 func current_round() -> (round : felt):
+end
+
+@storage_var
+func points_collected() -> (total_points : felt):
 end
 
 @storage_var
@@ -108,19 +120,7 @@ func player_count() -> (count : felt):
 end
 
 @storage_var
-func merkle_roots() -> (hash : MerkleRoots):
-end
-
-@storage_var
-func points_collected() -> (total_points : felt):
-end
-
-@storage_var
 func actions(roundKey : RoundKey) -> (action : PlayerAction):
-end
-
-@storage_var
-func seed() -> (res : felt):
 end
 
 #############
@@ -135,7 +135,7 @@ func constructor{
 }():
     game_state.write(GameStateEnum.NOTSTARTED)
     # TODO make into input
-    seed.write(120345)
+    random_seed.write(120345)
     return ()
 end
 
@@ -303,7 +303,8 @@ func register_action{
 ):
     alloc_locals
     _validate_game_started()
-    _validate_game_actions(playerHash)
+    _validate_player_joined(playerHash)
+    _validate_player_alive(playerHash)
 
     let (isCompleteTask) = _is_complete_task_action(actionProof, actionHash)
     let (isKillAction) = _is_kill_action(actionProof, actionHash)
@@ -386,19 +387,38 @@ func _validate_game_started{
     return ()
 end
 
-func _validate_game_actions{
+func _validate_player_joined{
     syscall_ptr : felt*,
     pedersen_ptr : HashBuiltin*,
     range_check_ptr,
 }(
     playerHash : felt
 ):
-    # verify player is valid
+    # verify player joined the game
     # TODO switch to using caller address
     # let (caller) = get_caller_address()
     with_attr error_message("You are not part of this game"):
-        let (isPlayer) = _is_player(playerHash)
+        let (isPlayer, index) = _is_player(playerHash)
         assert isPlayer = TRUE
+    end
+
+    return ()
+end
+
+func _validate_player_alive{
+    syscall_ptr : felt*,
+    pedersen_ptr : HashBuiltin*,
+    range_check_ptr,
+}(
+    playerHash : felt
+):
+    # verify player is alive
+    # TODO switch to using caller address
+    # let (caller) = get_caller_address()
+    with_attr error_message("You must be alive to perform this task"):
+        let (isPlayer, index) = _is_player(playerHash)
+        let (player) = players.read(index)
+        assert player.state = PlayerStateEnum.ALIVE
     end
 
     return ()
@@ -411,22 +431,23 @@ func _is_player{
 }(
     playerAddr : felt
 ) -> (
-    isPlayer: felt
+    isPlayer : felt,
+    index : felt
 ):
     let (players) = view_players()
     if players[0].address == playerAddr:
-        return (TRUE)
+        return (TRUE, 0)
     end
     if players[1].address == playerAddr:
-        return (TRUE)
+        return (TRUE, 1)
     end
     if players[2].address == playerAddr:
-        return (TRUE)
+        return (TRUE, 2)
     end
     if players[3].address == playerAddr:
-        return (TRUE)
+        return (TRUE, 3)
     end
-    return (FALSE)
+    return (FALSE, 0)
 end
 
 ###########
@@ -520,7 +541,10 @@ func _do_action{
 
     let (isKillAction) = _is_kill_action(action.actionProof, action.actionHash)
     if isKillAction == TRUE:
-        _kill_random_player(action.playerHash)
+        if isImposter == TRUE:
+            _kill_random_player(action.playerHash)
+            return ()
+        end
         return ()
     end
 
@@ -586,11 +610,11 @@ func _randint{
     bitwise_ptr : BitwiseBuiltin*,
 }(max : felt) -> (number : felt):
     alloc_locals
-    let (currSeed) = seed.read()
+    let (currSeed) = random_seed.read()
     let (result) = _hash2(x=max * currSeed, y=max + currSeed)
     let (result) = bitwise_and(result, 1023)
     let (_, number) = unsigned_div_rem(result, max)
-    seed.write(currSeed + 1)
+    random_seed.write(currSeed + 1)
     return (number)
 end
 
