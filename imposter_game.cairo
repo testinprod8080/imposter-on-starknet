@@ -1,8 +1,9 @@
 %lang starknet
 
-from starkware.cairo.common.cairo_builtins import HashBuiltin
+from starkware.cairo.common.cairo_builtins import HashBuiltin, BitwiseBuiltin
+from starkware.cairo.common.bitwise import bitwise_and
 from starkware.starknet.common.syscalls import get_caller_address
-from starkware.cairo.common.math import assert_lt, assert_le, assert_not_zero
+from starkware.cairo.common.math import assert_lt, assert_le, assert_not_zero, unsigned_div_rem
 from starkware.cairo.common.bool import TRUE, FALSE
 
 ###########
@@ -31,7 +32,11 @@ struct ActionTypeEnum:
     member DONOTHING : felt
     member MOVE : felt
     member COMPLETETASK : felt
-    member TAUNT : felt
+end
+
+struct PlayerStateEnum:
+    member ALIVE : felt
+    member DEAD : felt
 end
 
 #########
@@ -77,6 +82,11 @@ struct PlayerAction:
     member playerHash : felt
 end
 
+struct PlayerInfo:
+    member address : felt
+    member state : felt
+end
+
 ##############
 # STORAGE VARS
 ##############
@@ -90,7 +100,7 @@ func current_round() -> (round : felt):
 end
 
 @storage_var
-func players(index : felt) -> (hash : felt):
+func players(index : felt) -> (info : PlayerInfo):
 end
 
 @storage_var
@@ -109,6 +119,10 @@ end
 func actions(roundKey : RoundKey) -> (action : PlayerAction):
 end
 
+@storage_var
+func seed() -> (res : felt):
+end
+
 #############
 # CONSTRUCTOR
 #############
@@ -120,6 +134,8 @@ func constructor{
     range_check_ptr,
 }():
     game_state.write(GameStateEnum.NOTSTARTED)
+    # TODO make into input
+    seed.write(120345)
     return ()
 end
 
@@ -133,7 +149,7 @@ func view_players{
     pedersen_ptr : HashBuiltin*,
     range_check_ptr,
 }() -> (
-    players : (felt, felt, felt ,felt)
+    players : (PlayerInfo, PlayerInfo, PlayerInfo, PlayerInfo)
 ):
     let (player0) = players.read(0)
     let (player1) = players.read(1)
@@ -194,10 +210,10 @@ func view_round_actions{
     actions : (PlayerAction, PlayerAction, PlayerAction, PlayerAction)
 ):
     let (players) = view_players()
-    let (action0) = actions.read(RoundKey(round, players[0]))
-    let (action1) = actions.read(RoundKey(round, players[1]))
-    let (action2) = actions.read(RoundKey(round, players[2]))
-    let (action3) = actions.read(RoundKey(round, players[3]))
+    let (action0) = actions.read(RoundKey(round, players[0].address))
+    let (action1) = actions.read(RoundKey(round, players[1].address))
+    let (action2) = actions.read(RoundKey(round, players[2].address))
+    let (action3) = actions.read(RoundKey(round, players[3].address))
     return ((action0, action1, action2, action3))
 end
 
@@ -227,11 +243,11 @@ func join_game{
     end
 
     let (player) = players.read(index)
-    if player != 0:
+    if player.address != 0:
         # call recursively to iterate through array to find empty slot
         join_game(saltedHashAddress, index + 1)
     else:
-        players.write(index, saltedHashAddress)
+        players.write(index, PlayerInfo(address=saltedHashAddress, state=PlayerStateEnum.ALIVE))
         player_count.write(count + 1)
     end
 
@@ -279,17 +295,21 @@ func register_action{
     pedersen_ptr : HashBuiltin*,
     range_check_ptr,
 }(
+    actionType : felt,
     actionProof : felt, 
     actionHash : felt,
     playerProof : felt,
     playerHash : felt
 ):
+    alloc_locals
     _validate_game_started()
     _validate_game_actions(playerHash)
 
     let (isCompleteTask) = _is_complete_task_action(actionProof, actionHash)
-    let (isKillAction) = _is_kill_action(action.actionProof, action.actionHash)
+    let (isKillAction) = _is_kill_action(actionProof, actionHash)
     with_attr error_message("Cannot include this action because inputs cannot be validated"):
+        local isCompleteTask = isCompleteTask
+        local isKillAction = isKillAction
         assert_not_zero(isCompleteTask + isKillAction)
     end
 
@@ -300,7 +320,7 @@ func register_action{
             round=currRound, 
             playerAddr=playerHash),
         PlayerAction(
-            actionType=ActionTypeEnum.COMPLETETASK,
+            actionType=actionType,
             actionProof=actionProof,
             actionHash=actionHash,
             playerProof=playerProof,
@@ -315,6 +335,7 @@ func end_round{
     syscall_ptr : felt*,
     pedersen_ptr : HashBuiltin*,
     range_check_ptr,
+    bitwise_ptr : BitwiseBuiltin*,
 }():
     alloc_locals
     _validate_game_started()
@@ -393,16 +414,16 @@ func _is_player{
     isPlayer: felt
 ):
     let (players) = view_players()
-    if players[0] == playerAddr:
+    if players[0].address == playerAddr:
         return (TRUE)
     end
-    if players[1] == playerAddr:
+    if players[1].address == playerAddr:
         return (TRUE)
     end
-    if players[2] == playerAddr:
+    if players[2].address == playerAddr:
         return (TRUE)
     end
-    if players[3] == playerAddr:
+    if players[3].address == playerAddr:
         return (TRUE)
     end
     return (FALSE)
@@ -480,6 +501,7 @@ func _do_action{
     syscall_ptr : felt*,
     pedersen_ptr : HashBuiltin*,
     range_check_ptr,
+    bitwise_ptr : BitwiseBuiltin*,
 }(
     action: PlayerAction
 ):
@@ -497,7 +519,33 @@ func _do_action{
     end
 
     let (isKillAction) = _is_kill_action(action.actionProof, action.actionHash)
+    if isKillAction == TRUE:
+        _kill_random_player(action.playerHash)
+        return ()
+    end
 
+    return ()
+end
+
+func _kill_random_player{
+    syscall_ptr : felt*,
+    pedersen_ptr : HashBuiltin*,
+    range_check_ptr,
+    bitwise_ptr : BitwiseBuiltin*,
+}(player : felt):
+    # kill player except yourself
+    let (randomNum) = _randint(MAX_PLAYERS)
+    let (selected) = players.read(randomNum - 1)
+    if selected.address != player:
+        if selected.state == PlayerStateEnum.ALIVE:
+            players.write(randomNum - 1, PlayerInfo(address=selected.address, state=PlayerStateEnum.DEAD))
+            return ()
+        else:
+            _kill_random_player(player)
+        end
+    else:
+        _kill_random_player(player)
+    end
     return ()
 end
 
@@ -530,6 +578,34 @@ func _check_win_conditions{
     return ()
 end
 
+# Thanks to @Codiumdium on matchbox discord
+func _randint{
+    syscall_ptr : felt*,
+    pedersen_ptr : HashBuiltin*,
+    range_check_ptr,
+    bitwise_ptr : BitwiseBuiltin*,
+}(max : felt) -> (number : felt):
+    alloc_locals
+    let (currSeed) = seed.read()
+    let (result) = _hash2(x=max * currSeed, y=max + currSeed)
+    let (result) = bitwise_and(result, 1023)
+    let (_, number) = unsigned_div_rem(result, max)
+    seed.write(currSeed + 1)
+    return (number)
+end
+
+func _hash2{pedersen_ptr : HashBuiltin*}(x, y) -> (z : felt):
+    # Create a copy of the reference and advance hash_ptr.
+    let hash = pedersen_ptr
+    let pedersen_ptr = pedersen_ptr + HashBuiltin.SIZE
+    # Invoke the hash function.
+    hash.x = x
+    hash.y = y
+    # Return the result of the hash.
+    # The updated pointer is returned automatically.
+    return (z=hash.result)
+end
+
 # # sets start location to mid location
 # func _set_start_location_for_all{
 #     syscall_ptr : felt*,
@@ -542,7 +618,7 @@ end
 #     end
 
 #     let (player) = players.read(index)   
-#     if player != 0:
+#     if player.address != 0:
 
 #         actions.write(
 #             RoundKey(
