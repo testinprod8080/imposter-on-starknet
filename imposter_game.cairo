@@ -259,6 +259,7 @@ func register_complete_task{
     let (isCompleteTask) = _is_complete_task_action(actionProof, actionHash)
     with_attr error_message("Cannot include this action because inputs cannot be validated"):
         assert isCompleteTask = TRUE
+        assert 1 = 1
     end
 
     # Add action to current round action
