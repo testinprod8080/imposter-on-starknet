@@ -313,7 +313,7 @@ func register_action{
     actionProof : felt, 
     actionHash : felt,
     playerProof : felt,
-    playerHash : felt
+    playerHash : felt # TODO needs to be replaced by get_caller_address()
 ):
     alloc_locals
     _validate_game_started()
@@ -345,6 +345,23 @@ func register_action{
             playerHash=playerHash
         )
     )
+    return ()
+end
+
+@external
+func call_vote{
+    syscall_ptr : felt*,
+    pedersen_ptr : HashBuiltin*,
+    range_check_ptr,
+}(
+    playerAddr : felt # TODO needs to be replaced by get_caller_address()
+):
+    _validate_game_started()
+    # let (playerAddr) = get_caller_address()
+    _validate_player_joined(playerAddr)
+
+    game_state.write(GameStateEnum.VOTING)
+
     return ()
 end
 

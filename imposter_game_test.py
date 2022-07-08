@@ -23,6 +23,11 @@ DO_NOTHING_ACTION_TYPE = 1
 MOVE_ACTION_TYPE = 2
 COMPLETE_TASK_ACTION_TYPE = 3
 
+GAMESTATE_NOTSTARTED = 0
+GAMESTATE_STARTED = 1
+GAMESTATE_VOTING = 2
+GAMESTATE_ENDED = 3
+
 ALIVE = 0
 DEAD = 1
 
@@ -39,8 +44,6 @@ REALONESMERKLEROOT = 0x68650c6c5b
 COMPLETETASKMERKLEROOT = 0x7451
 KILLMERKLEROOT = 0xd34d
 DONOTHINGMERKLEROOT = 0x000
-
-GAMESTATE_ENDED = 3
 
 ############
 # TEST SETUP
@@ -164,6 +167,16 @@ async def test_fails_end_round(started_game):
     # Ending round fails when not all players have submitted an action
     with pytest.raises(Exception):
       await contract.end_round().invoke()
+
+@pytest.mark.asyncio
+async def test_success_call_vote(started_game):
+    contract = started_game
+
+    await contract.call_vote(PLAYER1).invoke()
+
+    # State changed to voting successfully
+    state = await contract.view_game_state().call()
+    assert state.result.gameState == GAMESTATE_VOTING
 
 @pytest.mark.asyncio
 async def test_success_realones_win(started_game):
