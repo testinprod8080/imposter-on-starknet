@@ -135,10 +135,43 @@ async def test_fails_not_player(started_game):
         ).invoke()
 
 @pytest.mark.asyncio
+async def test_fails_invalid_action_type(started_game):
+    contract = started_game
+
+    # Call with invalid action type
+    with pytest.raises(Exception):
+      await contract.register_action(
+          actionType=0,
+          actionProof=COMPLETETASKMERKLEROOT, 
+          actionHash=3, 
+          playerProof=REALONESMERKLEROOT, 
+          playerHash=PLAYER3
+        ).invoke()
+
+@pytest.mark.asyncio
+async def test_fails_end_round(started_game):
+    contract = started_game
+
+    # Register action
+    await contract.register_action(
+        actionType=COMPLETE_TASK_ACTION_TYPE,
+        actionProof=COMPLETETASKMERKLEROOT, 
+        actionHash=3, 
+        playerProof=REALONESMERKLEROOT, 
+        playerHash=PLAYER3
+      ).invoke()
+
+    # Ending round fails when not all players have submitted an action
+    with pytest.raises(Exception):
+      await contract.end_round().invoke()
+
+@pytest.mark.asyncio
 async def test_success_realones_win(started_game):
     contract = started_game
 
+    # -------
     # ROUND 1
+    # -------
 
     # Complete task to add 1 pt
     await contract.register_action(
@@ -192,7 +225,9 @@ async def test_success_realones_win(started_game):
     total_points = await contract.view_total_points().call()
     assert total_points.result.total_points == 3
 
+    # -------
     # ROUND 2
+    # -------
 
     # Complete task to add 1 pt
     await contract.register_action(
@@ -247,7 +282,10 @@ async def test_success_realones_win(started_game):
 async def test_success_imposters_win(started_game):
     contract = started_game
 
+    # -------
     # ROUND 1
+    # -------
+
     await contract.register_action(
         actionType=COMPLETE_TASK_ACTION_TYPE,
         actionProof=COMPLETETASKMERKLEROOT, 
@@ -279,7 +317,10 @@ async def test_success_imposters_win(started_game):
       ).invoke()
     await contract.end_round().invoke()
 
+    # -------
     # ROUND 2
+    # -------
+
     await contract.register_action(
         actionType=COMPLETE_TASK_ACTION_TYPE,
         actionProof=DONOTHINGMERKLEROOT, 
@@ -311,7 +352,10 @@ async def test_success_imposters_win(started_game):
       ).invoke()
     await contract.end_round().invoke()
 
+    # -------
     # ROUND 3
+    # -------
+
     await contract.register_action(
         actionType=COMPLETE_TASK_ACTION_TYPE,
         actionProof=DONOTHINGMERKLEROOT, 

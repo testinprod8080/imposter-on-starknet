@@ -49,11 +49,13 @@ end
 # STRUCTS
 #########
 
+# FEATURE: enable player movement and location-specific tasks
 # struct LocationTaskMerkleRoots:
 #     member locationRoot : felt
 #     member taskRoot : felt
 # end
 
+# FEATURE: enable player movement and location-specific tasks
 # struct LocationMerkleRoots:
 #     member upperleft : LocationTaskMerkleRoots
 #     member uppermid : LocationTaskMerkleRoots
@@ -67,10 +69,10 @@ end
 # end
 
 struct MerkleRoots:
-    # 
     member realOnesMerkleRoot : felt
     member taskMerkleRoot : felt
     member killMerkleRoot : felt
+    # FEATURE: enable player movement and location-specific tasks
     # member locationMerkleRoots : LocationMerkleRoots
 end
 
@@ -80,6 +82,7 @@ struct RoundKey:
 end
 
 struct PlayerAction:
+    # FEATURE: enable player movement and location-specific tasks
     # member currentLocationRoot : felt
     member actionType : felt
     member actionProof : felt
@@ -291,6 +294,7 @@ func start_game{
 
     game_state.write(GameStateEnum.STARTED)
     current_round.write(1)
+    # FEATURE: enable player movement and location-specific tasks
     # _set_start_location_for_all(0, locationMerkleRoots.mid.locationRoot)
     return ()
 end
@@ -314,6 +318,7 @@ func register_action{
     alloc_locals
     _validate_game_started()
     _validate_player_joined(playerHash)
+    _validate_action_type(actionType)
     # _validate_player_alive(playerHash)
 
     # ? Not validating the submitted action can be resolved by setting invalids to be "Do Nothing" actions
@@ -353,11 +358,18 @@ func end_round{
     alloc_locals
     _validate_game_started()
 
+    # Can only end round if all players have submitted actions
     let (currRound) = current_round.read()
     let (playerActions) = view_round_actions(currRound)
+    local actions : (PlayerAction, PlayerAction, PlayerAction, PlayerAction) = playerActions
+    with_attr error_message("Not all players have submitted actions"):
+        assert_not_zero(actions[0].actionType)
+        assert_not_zero(actions[1].actionType)
+        assert_not_zero(actions[2].actionType)
+        assert_not_zero(actions[3].actionType)
+    end
 
     # TODO need to handle order of actions other than index
-    local actions : (PlayerAction, PlayerAction, PlayerAction, PlayerAction) = playerActions
     _do_action(actions[0])
     _do_action(actions[1])
     _do_action(actions[2])
@@ -432,6 +444,16 @@ func _validate_player_alive{
         let (index) = _get_player_index(playerHash)
         let (player) = players.read(index)
         assert player.state = PlayerStateEnum.ALIVE
+    end
+
+    return ()
+end
+
+func _validate_action_type(
+    actionType : felt
+):
+    with_attr error_message("Not a valid action"):
+        assert_not_zero(actionType)
     end
 
     return ()
@@ -694,7 +716,7 @@ func _check_win_conditions{
     return ()
 end
 
-# Thanks to @Codiumdium on matchbox discord
+# Thanks to @Codiumdium on matchbox discord for this pseudo random number generator
 func _randint{
     syscall_ptr : felt*,
     pedersen_ptr : HashBuiltin*,
@@ -710,7 +732,14 @@ func _randint{
     return (number)
 end
 
-func _hash2{pedersen_ptr : HashBuiltin*}(x, y) -> (z : felt):
+func _hash2{
+    pedersen_ptr : HashBuiltin*
+}(
+    x, 
+    y
+) -> (
+    z : felt
+):
     # Create a copy of the reference and advance hash_ptr.
     let hash = pedersen_ptr
     let pedersen_ptr = pedersen_ptr + HashBuiltin.SIZE
@@ -722,6 +751,7 @@ func _hash2{pedersen_ptr : HashBuiltin*}(x, y) -> (z : felt):
     return (z=hash.result)
 end
 
+# FEATURE: enable player movement and location-specific tasks
 # # sets start location to mid location
 # func _set_start_location_for_all{
 #     syscall_ptr : felt*,
