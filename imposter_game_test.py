@@ -19,10 +19,13 @@ TRUE = 1
 # TEST DATA
 ###########
 
-PLAYER1=0x68650c6c5c
-PLAYER2=0x68650c6c5d
-PLAYER3=0x68650c6c5e
-PLAYER4=0x68650c6c5f
+PLAYER1 = 0x68650c6c5c
+PLAYER2 = 0x68650c6c5d
+PLAYER3 = 0x68650c6c5e
+PLAYER4 = 0x68650c6c5f
+
+NONIMPOSTERMERKLEROOT = 0x68650c6c5b
+COMPLETETASKROOT = 0x68650c6c5c
 
 ############
 # TEST SETUP
@@ -51,8 +54,8 @@ async def join_all_players(init_contract):
 @pytest.fixture
 async def started_game(join_all_players):
     await join_all_players.start_game(
-      notImpostersMerkleRoot=0x68650c6c5b,
-      taskMerkleRoot=0x68650c6c5c
+      notImpostersMerkleRoot=NONIMPOSTERMERKLEROOT,
+      taskMerkleRoot=COMPLETETASKROOT
     ).invoke()
     return join_all_players
 
@@ -85,7 +88,12 @@ async def test_fails_call_action_while_not_started(init_contract):
 
     # Start the game
     with pytest.raises(Exception):
-      await contract.register_complete_task(actionProof=0x68650c6c5c, actionHash=3, playerProof=1, playerHash=1).invoke()
+      await contract.register_complete_task(
+          actionProof=COMPLETETASKROOT, 
+          actionHash=3, 
+          playerProof=1, 
+          playerHash=1
+        ).invoke()
 
 @pytest.mark.asyncio
 async def test_fails_too_many_players(join_all_players):
@@ -93,7 +101,7 @@ async def test_fails_too_many_players(join_all_players):
 
     # Join the game
     with pytest.raises(Exception): 
-      await contract.join_game(saltedHashAddress=0x68650c6c6a, index=4).invoke()
+      await contract.join_game(saltedHashAddress=0x123, index=4).invoke()
 
 @pytest.mark.asyncio
 async def test_fails_not_player(started_game):
@@ -101,14 +109,24 @@ async def test_fails_not_player(started_game):
 
     # Non player calls action
     with pytest.raises(Exception):
-      await contract.register_complete_task(actionProof=0x68650c6c5c, actionHash=3, playerProof=1, playerHash=1).invoke()
+      await contract.register_complete_task(
+          actionProof=COMPLETETASKROOT, 
+          actionHash=3, 
+          playerProof=1, 
+          playerHash=1
+        ).invoke()
 
 @pytest.mark.asyncio
 async def test_success_nonimposter_adds_points(started_game):
     contract = started_game
 
     # Complete task to bump up points
-    await contract.register_complete_task(actionProof=0x68650c6c5c, actionHash=3, playerProof=0x68650c6c5b, playerHash=PLAYER3).invoke()
+    await contract.register_complete_task(
+        actionProof=COMPLETETASKROOT, 
+        actionHash=3, 
+        playerProof=NONIMPOSTERMERKLEROOT, 
+        playerHash=PLAYER3
+      ).invoke()
 
     # Check actions
     actions = await contract.view_curr_round_actions(1).call()
@@ -120,10 +138,10 @@ async def test_success_nonimposter_adds_points(started_game):
 #     contract = started_game
 
 #     # Imposter does task
-#     await contract.register_complete_task(actionProof=0x68650c6c5c, actionHash=3, playerProof=1, playerHash=PLAYER1).invoke()
+#     await contract.register_complete_task(actionProof=COMPLETETASKROOT, actionHash=3, playerProof=1, playerHash=PLAYER1).invoke()
 
 #     # Complete task to bump up points
-#     await contract.register_complete_task(actionProof=0x68650c6c5c, actionHash=3, playerProof=0x68650c6c5b, playerHash=PLAYER3).invoke()
+#     await contract.register_complete_task(actionProof=COMPLETETASKROOT, actionHash=3, playerProof=NONIMPOSTERMERKLEROOT, playerHash=PLAYER3).invoke()
 
 #     # Check number of total points
 #     total_points = await contract.view_total_points().call()
