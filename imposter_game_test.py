@@ -29,7 +29,8 @@ PLAYER3 = 0x68650c6c5e
 PLAYER4 = 0x68650c6c5f
 
 NONIMPOSTERMERKLEROOT = 0x68650c6c5b
-COMPLETETASKROOT = 0x68650c6c5c
+COMPLETETASKMERKLEROOT = 0x7451
+KILLMERKLEROOT = 0xd34d
 
 GAMESTATE_ENDED = 3
 
@@ -61,7 +62,8 @@ async def join_all_players(init_contract):
 async def started_game(join_all_players):
     await join_all_players.start_game(
       notImpostersMerkleRoot=NONIMPOSTERMERKLEROOT,
-      taskMerkleRoot=COMPLETETASKROOT
+      taskMerkleRoot=COMPLETETASKMERKLEROOT,
+      killMerkleRoot=KILLMERKLEROOT
     ).invoke()
     return join_all_players
 
@@ -94,8 +96,8 @@ async def started_game(join_all_players):
 
 #     # Start the game
 #     with pytest.raises(Exception):
-#       await contract.register_complete_task(
-#           actionProof=COMPLETETASKROOT, 
+#       await contract.register_action(
+#           actionProof=COMPLETETASKMERKLEROOT, 
 #           actionHash=3, 
 #           playerProof=1, 
 #           playerHash=1
@@ -115,8 +117,8 @@ async def started_game(join_all_players):
 
 #     # Non player calls action
 #     with pytest.raises(Exception):
-#       await contract.register_complete_task(
-#           actionProof=COMPLETETASKROOT, 
+#       await contract.register_action(
+#           actionProof=COMPLETETASKMERKLEROOT, 
 #           actionHash=3, 
 #           playerProof=1, 
 #           playerHash=1
@@ -129,16 +131,16 @@ async def test_success_nonimposters_win(started_game):
     # ROUND 1
 
     # Complete task to add 1 pt
-    await contract.register_complete_task(
-        actionProof=COMPLETETASKROOT, 
+    await contract.register_action(
+        actionProof=COMPLETETASKMERKLEROOT, 
         actionHash=3, 
         playerProof=NONIMPOSTERMERKLEROOT, 
         playerHash=PLAYER3
       ).invoke()
 
     # Imposter pretends to complete task, should not add points
-    await contract.register_complete_task(
-        actionProof=COMPLETETASKROOT, 
+    await contract.register_action(
+        actionProof=COMPLETETASKMERKLEROOT, 
         actionHash=3, 
         playerProof=1, 
         playerHash=PLAYER1
@@ -163,32 +165,32 @@ async def test_success_nonimposters_win(started_game):
     # ROUND 2
 
     # Complete task to add 1 pt
-    await contract.register_complete_task(
-        actionProof=COMPLETETASKROOT, 
+    await contract.register_action(
+        actionProof=COMPLETETASKMERKLEROOT, 
         actionHash=3, 
         playerProof=NONIMPOSTERMERKLEROOT, 
         playerHash=PLAYER3
       ).invoke()
 
     # Complete task to add 1 pt
-    await contract.register_complete_task(
-        actionProof=COMPLETETASKROOT, 
+    await contract.register_action(
+        actionProof=COMPLETETASKMERKLEROOT, 
         actionHash=3, 
         playerProof=NONIMPOSTERMERKLEROOT, 
         playerHash=PLAYER2
       ).invoke()
 
     # Complete task to add 1 pt
-    await contract.register_complete_task(
-        actionProof=COMPLETETASKROOT, 
+    await contract.register_action(
+        actionProof=COMPLETETASKMERKLEROOT, 
         actionHash=3, 
         playerProof=NONIMPOSTERMERKLEROOT, 
         playerHash=PLAYER4
       ).invoke()
 
     # Imposter pretends to complete task, should not add points
-    await contract.register_complete_task(
-        actionProof=COMPLETETASKROOT, 
+    await contract.register_action(
+        actionProof=COMPLETETASKMERKLEROOT, 
         actionHash=3, 
         playerProof=1, 
         playerHash=PLAYER1

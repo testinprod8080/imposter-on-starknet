@@ -59,6 +59,7 @@ struct MerkleRoots:
     # 
     member notImpostersMerkleRoot : felt
     member taskMerkleRoot : felt
+    member killMerkleRoot : felt
     # member locationMerkleRoots : LocationMerkleRoots
 end
 
@@ -244,7 +245,8 @@ func start_game{
     range_check_ptr,
 }(
     notImpostersMerkleRoot : felt, 
-    taskMerkleRoot : felt
+    taskMerkleRoot : felt,
+    killMerkleRoot : felt
 ):
     _validate_pre_game_actions()
 
@@ -256,7 +258,8 @@ func start_game{
     merkle_roots.write(
         MerkleRoots(
             notImpostersMerkleRoot=notImpostersMerkleRoot,
-            taskMerkleRoot=taskMerkleRoot
+            taskMerkleRoot=taskMerkleRoot,
+            killMerkleRoot=killMerkleRoot
         )
     )
 
@@ -270,10 +273,8 @@ end
 # Actions after game started
 # --------------------------
 
-# effects: 
-#   - doing a task increases the total points, unless imposter
 @external
-func register_complete_task{
+func register_action{
     syscall_ptr : felt*,
     pedersen_ptr : HashBuiltin*,
     range_check_ptr,
@@ -283,11 +284,13 @@ func register_complete_task{
     playerProof : felt,
     playerHash : felt
 ):
+    _validate_game_started()
     _validate_game_actions(playerHash)
 
     let (isCompleteTask) = _is_complete_task_action(actionProof, actionHash)
+    let (isKillAction) = _is_kill_action(action.actionProof, action.actionHash)
     with_attr error_message("Cannot include this action because inputs cannot be validated"):
-        assert isCompleteTask = TRUE
+        assert_not_zero(isCompleteTask + isKillAction)
     end
 
     # Add action to current round's actions
@@ -369,8 +372,6 @@ func _validate_game_actions{
 }(
     playerHash : felt
 ):
-    _validate_game_started()
-
     # verify player is valid
     # TODO switch to using caller address
     # let (caller) = get_caller_address()
@@ -453,10 +454,25 @@ func _is_complete_task_action{
     actionProof : felt, 
     actionLeaf : felt
 ) -> (
-    canCollect : felt
+    isCompleteTaskAction : felt
 ):
     let (merkleRoots) = merkle_roots.read()
     let (verified) = _merkle_verify(merkleRoots.taskMerkleRoot, actionProof, actionLeaf)
+    return (verified)
+end
+
+func _is_kill_action{
+    syscall_ptr : felt*,
+    pedersen_ptr : HashBuiltin*,
+    range_check_ptr,
+}(
+    actionProof : felt, 
+    actionLeaf : felt
+) -> (
+    isKillAction : felt
+):
+    let (merkleRoots) = merkle_roots.read()
+    let (verified) = _merkle_verify(merkleRoots.killMerkleRoot, actionProof, actionLeaf)
     return (verified)
 end
 
@@ -467,18 +483,20 @@ func _do_action{
 }(
     action: PlayerAction
 ):
-    # if player is an imposter, do nothing
     let (isImposter) = _is_imposter(action.playerProof, action.playerHash)
-    if isImposter == TRUE:
-        return ()
-    end
     
-    # if action is verified against locationMerkleRoots, add points
+    # if action is verified against taskMerkleRoot, add points
     let (isCompleteTask) = _is_complete_task_action(action.actionProof, action.actionHash)
     if isCompleteTask == TRUE:
+        # if player is an imposter, do nothing
+        if isImposter == TRUE:
+            return ()
+        end
         _increment_points()
         return ()
     end
+
+    let (isKillAction) = _is_kill_action(action.actionProof, action.actionHash)
 
     return ()
 end
