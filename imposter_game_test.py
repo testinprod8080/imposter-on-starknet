@@ -16,7 +16,7 @@ CONTRACT_FILE = os.path.join(TEST_DIR, "./imposter_game.cairo")
 FALSE = 0
 TRUE = 1
 
-MAX_POINTS = 3
+MAX_POINTS = 5
 
 INVALID_ACTION_TYPE = 0
 DO_NOTHING_ACTION_TYPE = 1
@@ -135,46 +135,10 @@ async def test_fails_not_player(started_game):
         ).invoke()
 
 @pytest.mark.asyncio
-async def test_success_nonimposters_win(started_game):
+async def test_success_realones_win(started_game):
     contract = started_game
 
     # ROUND 1
-
-    # Complete task to add 1 pt
-    await contract.register_action(
-        actionType=COMPLETE_TASK_ACTION_TYPE,
-        actionProof=COMPLETETASKMERKLEROOT, 
-        actionHash=3, 
-        playerProof=REALONESMERKLEROOT, 
-        playerHash=PLAYER3
-      ).invoke()
-
-    # Imposter pretends to complete task, should not add points
-    await contract.register_action(
-        actionType=COMPLETE_TASK_ACTION_TYPE,
-        actionProof=COMPLETETASKMERKLEROOT, 
-        actionHash=3, 
-        playerProof=1, 
-        playerHash=PLAYER1
-      ).invoke()
-
-    # Check actions
-    actions = await contract.view_round_actions(1).call()
-    player1Action = actions.result.actions[0]
-    assert player1Action.actionType == COMPLETE_TASK_ACTION_TYPE
-    player3Action = actions.result.actions[2]
-    assert player3Action.actionType == COMPLETE_TASK_ACTION_TYPE
-
-    # End round
-    total_points = await contract.view_total_points().call()
-    assert total_points.result.total_points == 0
-    await contract.end_round().invoke()
-
-    # Check number of total points
-    total_points = await contract.view_total_points().call()
-    assert total_points.result.total_points == 1 
-
-    # ROUND 2
 
     # Complete task to add 1 pt
     await contract.register_action(
@@ -212,20 +176,23 @@ async def test_success_nonimposters_win(started_game):
         playerHash=PLAYER1
       ).invoke()
 
+    # Check actions
+    actions = await contract.view_round_actions(1).call()
+    player1Action = actions.result.actions[0]
+    assert player1Action.actionType == COMPLETE_TASK_ACTION_TYPE
+    player3Action = actions.result.actions[2]
+    assert player3Action.actionType == COMPLETE_TASK_ACTION_TYPE
+
+    # End round
+    total_points = await contract.view_total_points().call()
+    assert total_points.result.total_points == 0
+    await contract.end_round().invoke()
+
     # Check number of total points
     total_points = await contract.view_total_points().call()
-    assert total_points.result.total_points == 1
-    await contract.end_round().invoke()
-    total_points = await contract.view_total_points().call()
-    assert total_points.result.total_points == MAX_POINTS
+    assert total_points.result.total_points == 3
 
-    # Non imposters win
-    state = await contract.view_game_state().call()
-    assert state.result.gameState == GAMESTATE_ENDED
-
-@pytest.mark.asyncio
-async def test_success_imposter_kills(started_game):
-    contract = started_game
+    # ROUND 2
 
     # Complete task to add 1 pt
     await contract.register_action(
@@ -236,31 +203,45 @@ async def test_success_imposter_kills(started_game):
         playerHash=PLAYER3
       ).invoke()
 
-    # Imposter adds kill action
+    # Complete task to add 1 pt
     await contract.register_action(
-        actionType=DO_NOTHING_ACTION_TYPE,
-        actionProof=KILLMERKLEROOT, 
-        actionHash=3, 
-        playerProof=1, 
-        playerHash=PLAYER1
-      ).invoke()
-    await contract.register_action(
-        actionType=DO_NOTHING_ACTION_TYPE,
-        actionProof=KILLMERKLEROOT, 
+        actionType=COMPLETE_TASK_ACTION_TYPE,
+        actionProof=COMPLETETASKMERKLEROOT, 
         actionHash=3, 
         playerProof=REALONESMERKLEROOT, 
         playerHash=PLAYER2
       ).invoke()
 
-    # Check that correct number of players died
+    # Complete task to add 1 pt
+    await contract.register_action(
+        actionType=COMPLETE_TASK_ACTION_TYPE,
+        actionProof=DONOTHINGMERKLEROOT, 
+        actionHash=3, 
+        playerProof=REALONESMERKLEROOT, 
+        playerHash=PLAYER4
+      ).invoke()
+
+    # Imposter pretends to complete task, should not add points
+    await contract.register_action(
+        actionType=COMPLETE_TASK_ACTION_TYPE,
+        actionProof=COMPLETETASKMERKLEROOT, 
+        actionHash=3, 
+        playerProof=1, 
+        playerHash=PLAYER1
+      ).invoke()
+
+    # Check points did not change before round ended
+    total_points = await contract.view_total_points().call()
+    assert total_points.result.total_points == 3
+
+    # Check number of total points
     await contract.end_round().invoke()
-    players = await contract.view_players().call()
-    assert (
-        players.result.players[0].state 
-        + players.result.players[1].state 
-        + players.result.players[2].state 
-        + players.result.players[3].state
-      ) > 0
+    total_points = await contract.view_total_points().call()
+    assert total_points.result.total_points == MAX_POINTS
+
+    # Real Ones win
+    state = await contract.view_game_state().call()
+    assert state.result.gameState == GAMESTATE_ENDED
 
 @pytest.mark.asyncio
 async def test_success_imposters_win(started_game):
@@ -365,3 +346,10 @@ async def test_success_imposters_win(started_game):
     # Check that game ended
     gameState = await contract.view_game_state().call()
     assert gameState.result.gameState == GAMESTATE_ENDED
+    players = await contract.view_players().call()
+    assert (
+        players.result.players[0].state 
+        + players.result.players[1].state 
+        + players.result.players[2].state 
+        + players.result.players[3].state
+      ) >= 3

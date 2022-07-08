@@ -14,7 +14,7 @@ const MIN_PLAYERS = 4
 
 # TODO make configurable
 const MAX_PLAYERS = 4
-const MAX_POINTS = 3
+const MAX_POINTS = 5
 
 #######
 # ENUMS
@@ -316,6 +316,8 @@ func register_action{
     _validate_player_joined(playerHash)
     # _validate_player_alive(playerHash)
 
+    # ? Not validating the submitted action can be resolved by setting invalids to be "Do Nothing" actions
+    # ? It also opens it up to players submitting invalid actions as a distraction
     # let (isCompleteTask) = _is_complete_task_action(actionProof, actionHash)
     # let (isKillAction) = _is_kill_action(actionProof, actionHash)
     # with_attr error_message("Cannot include this action because inputs cannot be validated"):
