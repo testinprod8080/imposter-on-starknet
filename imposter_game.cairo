@@ -12,6 +12,25 @@ from starkware.cairo.common.bool import TRUE, FALSE
 const MIN_PLAYERS = 4
 const MAX_PLAYERS = 4
 
+#######
+# ENUMS
+#######
+
+struct GameStateEnum:
+    member NOTSTARTED : felt
+    member STARTED : felt
+    member VOTING : felt
+    member ENDED : felt
+end
+
+struct ActionTypeEnum:
+    member INVALID : felt
+    member DONOTHING : felt
+    member MOVE : felt
+    member COMPLETETASK : felt
+    member TAUNT : felt
+end
+
 #########
 # STRUCTS
 #########
@@ -52,24 +71,6 @@ struct PlayerAction:
     member actionHash : felt
     member playerProof : felt
     member playerHash : felt
-end
-
-#######
-# ENUMS
-#######
-
-struct GameStateEnum:
-    member NOTSTARTED : felt
-    member STARTED : felt
-    member VOTING : felt
-    member ENDED : felt
-end
-
-struct ActionTypeEnum:
-    member DONOTHING : felt
-    member MOVE : felt
-    member COMPLETETASK : felt
-    member TAUNT : felt
 end
 
 ##############
@@ -161,7 +162,7 @@ func view_total_points{
 end
 
 @view
-func view_curr_round_actions{
+func view_round_actions{
     syscall_ptr : felt*,
     pedersen_ptr : HashBuiltin*,
     range_check_ptr,
@@ -259,10 +260,9 @@ func register_complete_task{
     let (isCompleteTask) = _is_complete_task_action(actionProof, actionHash)
     with_attr error_message("Cannot include this action because inputs cannot be validated"):
         assert isCompleteTask = TRUE
-        assert 1 = 1
     end
 
-    # Add action to current round action
+    # Add action to current round's actions
     let (currRound) = current_round.read()
     actions.write(
         RoundKey(
@@ -277,21 +277,29 @@ func register_complete_task{
         )
     )
     return ()
+end
 
-    # # if player is an imposter, do nothing
-    # let (isImposter) = _is_imposter(playerProof, playerHash)
-    # if isImposter == TRUE:
-    #     return ()
-    # end
+@external
+func end_round{
+    syscall_ptr : felt*,
+    pedersen_ptr : HashBuiltin*,
+    range_check_ptr,
+}():
+    alloc_locals
+    _validate_game_started()
 
-    # # if action is verified against locationMerkleRoots, add points
-    # let (isCompleteTask) = _is_complete_task_action(actionProof, actionHash)
-    # if isCompleteTask == TRUE:
-    #     _increment_points()
-    #     return ()
-    # end
+    let (currRound) = current_round.read()
+    let (playerActions) = view_round_actions(currRound)
 
-    # return ()
+    # TODO need to handle order of actions other than index
+    local actions : (PlayerAction, PlayerAction, PlayerAction, PlayerAction) = playerActions
+    _do_action(actions[0])
+    _do_action(actions[1])
+    _do_action(actions[2])
+    _do_action(actions[3])
+
+    current_round.write(currRound + 1)
+    return ()
 end
 
 #############
@@ -311,15 +319,24 @@ func _validate_pre_game_actions{
     return ()
 end
 
+func _validate_game_started{
+    syscall_ptr : felt*,
+    pedersen_ptr : HashBuiltin*,
+    range_check_ptr,
+}():
+    let (state) = game_state.read()
+    with_attr error_message("Can only perform this action when game has started"):
+        assert state = GameStateEnum.STARTED
+    end
+    return ()
+end
+
 func _validate_game_actions{
     syscall_ptr : felt*,
     pedersen_ptr : HashBuiltin*,
     range_check_ptr,
 }(playerHash : felt):
-    let (state) = game_state.read()
-    with_attr error_message("Can only perform this action when game has started"):
-        assert state = GameStateEnum.STARTED
-    end
+    _validate_game_started()
 
     # verify player is valid
     # TODO switch to using caller address
@@ -394,6 +411,27 @@ func _is_complete_task_action{
     return (verified)
 end
 
+func _do_action{
+    syscall_ptr : felt*,
+    pedersen_ptr : HashBuiltin*,
+    range_check_ptr,
+}(action: PlayerAction):
+    # if player is an imposter, do nothing
+    let (isImposter) = _is_imposter(action.playerProof, action.playerHash)
+    if isImposter == TRUE:
+        return ()
+    end
+    
+    # if action is verified against locationMerkleRoots, add points
+    let (isCompleteTask) = _is_complete_task_action(action.actionProof, action.actionHash)
+    if isCompleteTask == TRUE:
+        _increment_points()
+        return ()
+    end
+
+    return ()
+end
+
 func _increment_points{
     syscall_ptr : felt*,
     pedersen_ptr : HashBuiltin*,
@@ -401,16 +439,6 @@ func _increment_points{
 }():
     let (currTotalPoints) = points_collected.read()
     points_collected.write(currTotalPoints + 1)
-    return ()
-end
-
-func _increment_round{
-    syscall_ptr : felt*,
-    pedersen_ptr : HashBuiltin*,
-    range_check_ptr,
-}():
-    let (currRound) = current_round.read()
-    current_round.write(currRound + 1)
     return ()
 end
 
