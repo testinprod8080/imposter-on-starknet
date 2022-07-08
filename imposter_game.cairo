@@ -408,7 +408,7 @@ func _validate_player_joined{
     # TODO switch to using caller address
     # let (caller) = get_caller_address()
     with_attr error_message("You are not part of this game"):
-        let (isPlayer, index) = _is_player(playerHash)
+        let (isPlayer) = _is_player(playerHash)
         assert isPlayer = TRUE
     end
 
@@ -426,7 +426,8 @@ func _validate_player_alive{
     # TODO switch to using caller address
     # let (caller) = get_caller_address()
     with_attr error_message("You must be alive to perform this task"):
-        let (isPlayer, index) = _is_player(playerHash)
+        let (isPlayer) = _is_player(playerHash)
+        let (index) = _get_player_index(playerHash)
         let (player) = players.read(index)
         assert player.state = PlayerStateEnum.ALIVE
     end
@@ -441,23 +442,47 @@ func _is_player{
 }(
     playerAddr : felt
 ) -> (
-    isPlayer : felt,
+    isPlayer : felt
+):
+    let (players) = view_players()
+    if players[0].address == playerAddr:
+        return (TRUE)
+    end
+    if players[1].address == playerAddr:
+        return (TRUE)
+    end
+    if players[2].address == playerAddr:
+        return (TRUE)
+    end
+    if players[3].address == playerAddr:
+        return (TRUE)
+    end
+    return (FALSE)
+end
+
+func _get_player_index{
+    syscall_ptr : felt*,
+    pedersen_ptr : HashBuiltin*,
+    range_check_ptr,
+}(
+    playerAddr : felt
+) -> (
     index : felt
 ):
     let (players) = view_players()
     if players[0].address == playerAddr:
-        return (TRUE, 0)
+        return (0)
     end
     if players[1].address == playerAddr:
-        return (TRUE, 1)
+        return (1)
     end
     if players[2].address == playerAddr:
-        return (TRUE, 2)
+        return (2)
     end
     if players[3].address == playerAddr:
-        return (TRUE, 3)
+        return (3)
     end
-    return (FALSE, 0)
+    return (0)
 end
 
 ###########
@@ -598,11 +623,26 @@ func _increment_points{
     return ()
 end
 
-# func _check_alive_realone{
-#     syscall_ptr : felt*,
-#     pedersen_ptr : HashBuiltin*,
-#     range_check_ptr,
-# }():
+func _check_alive_realone{
+    syscall_ptr : felt*,
+    pedersen_ptr : HashBuiltin*,
+    range_check_ptr,
+}(
+    playerAddr : felt
+) -> (
+    isAliveRealOne : felt
+):
+    let (currRound) = current_round.read()
+    let (action) = actions.read(RoundKey(currRound, playerAddr))
+    let (isImposter) = _is_imposter(action.playerProof, action.playerHash)
+    let (index) = _get_player_index(playerAddr)
+    let (player) = players.read(index)
+    if (isImposter + player.state) == 2:
+        return (TRUE)
+    else:
+        return (FALSE)
+    end
+end
 
 func _check_win_conditions{
     syscall_ptr : felt*,
@@ -610,16 +650,16 @@ func _check_win_conditions{
     range_check_ptr,
 }():
     # Imposters win if real ones are all dead
-    # get all alive players
-    # let (players) = view_players()
-    # let (player0alivereal) = _check_alive_realone(players[0])
-    # let (player1alivereal) = _check_alive_realone(players[1])
-    # let (player2alivereal) = _check_alive_realone(players[2])
-    # let (player3alivereal) = _check_alive_realone(players[3])
-    # if alive_realones == 0:
-    #     game_state.write(GameStateEnum.ENDED)
-    #     return ()
-    # end
+    get all alive players
+    let (players) = view_players()
+    let (player0alivereal) = _check_alive_realone(players[0])
+    let (player1alivereal) = _check_alive_realone(players[1])
+    let (player2alivereal) = _check_alive_realone(players[2])
+    let (player3alivereal) = _check_alive_realone(players[3])
+    if (player0alivereal + player1alivereal + player2alivereal + player3alivereal) == 0:
+        game_state.write(GameStateEnum.ENDED)
+        return ()
+    end
 
     # Real Ones win if at least one is alive and max points reached
     let (currTotalPoints) = points_collected.read()
