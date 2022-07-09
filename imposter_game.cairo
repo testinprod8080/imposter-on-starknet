@@ -17,8 +17,8 @@ const MIN_PLAYERS = 4
 const MAX_PLAYERS = 4
 const MAX_POINTS = 5
 
-# should be calculated
-const INIT_MIN_VOTE_TO_KICK = 2
+# # should be calculated
+# const INIT_MIN_VOTE_TO_KICK = 2
 
 #######
 # ENUMS
@@ -145,9 +145,9 @@ end
 func actions(roundKey : RoundKey) -> (action : PlayerAction):
 end
 
-@storage_var
-func votes(player : felt) -> (vote_info : VoteInfo):
-end
+# @storage_var
+# func votes(player : felt) -> (vote_info : VoteInfo):
+# end
 
 #############
 # CONSTRUCTOR
@@ -361,73 +361,73 @@ func register_action{
     return ()
 end
 
-@external
-func call_vote{
-    syscall_ptr : felt*,
-    pedersen_ptr : HashBuiltin*,
-    range_check_ptr,
-}(
-    playerAddr : felt # TODO needs to be replaced by get_caller_address()
-):
-    _validate_game_started()
-    # let (playerAddr) = get_caller_address()
-    _validate_player_joined(playerAddr)
+# @external
+# func call_vote{
+#     syscall_ptr : felt*,
+#     pedersen_ptr : HashBuiltin*,
+#     range_check_ptr,
+# }(
+#     playerAddr : felt # TODO needs to be replaced by get_caller_address()
+# ):
+#     _validate_game_started()
+#     # let (playerAddr) = get_caller_address()
+#     _validate_player_joined(playerAddr)
 
-    game_state.write(GameStateEnum.VOTING)
+#     game_state.write(GameStateEnum.VOTING)
 
-    return ()
-end
+#     return ()
+# end
 
-@external
-func vote{
-    syscall_ptr : felt*,
-    pedersen_ptr : HashBuiltin*,
-    range_check_ptr,
-}(
-    playerAddr : felt, # TODO needs to be replaced by get_caller_address()
-    playerVoted : felt
-):
-    _validate_game_started()
-    # let (playerAddr) = get_caller_address()
-    _validate_player_joined(playerAddr)
+# @external
+# func vote{
+#     syscall_ptr : felt*,
+#     pedersen_ptr : HashBuiltin*,
+#     range_check_ptr,
+# }(
+#     playerAddr : felt, # TODO needs to be replaced by get_caller_address()
+#     playerVoted : felt
+# ):
+#     _validate_game_started()
+#     # let (playerAddr) = get_caller_address()
+#     _validate_player_joined(playerAddr)
 
-    # consider vote for non-player as a skip 
-    let (isPlayer) = _is_player(playerVoted)
-    if isPlayer == TRUE:
-        # store my vote
-        let (myVoteCount) = votes.read(playerAddr)
-        votes.write(playerAddr, VoteInfo(vote_count=myVoteCount.vote_count, voted_for=playerVoted))
+#     # consider vote for non-player as a skip 
+#     let (isPlayer) = _is_player(playerVoted)
+#     if isPlayer == TRUE:
+#         # store my vote
+#         let (myVoteCount) = votes.read(playerAddr)
+#         votes.write(playerAddr, VoteInfo(vote_count=myVoteCount.vote_count, voted_for=playerVoted))
 
-        # apply my vote to player
-        let (votedFor) = votes.read(playerVoted)
-        votes.write(playerVoted, VoteInfo(vote_count=votedFor.vote_count + 1, voted_for=votedFor.voted_for))
+#         # apply my vote to player
+#         let (votedFor) = votes.read(playerVoted)
+#         votes.write(playerVoted, VoteInfo(vote_count=votedFor.vote_count + 1, voted_for=votedFor.voted_for))
 
-        return ()
-    end
+#         return ()
+#     end
 
-    # count votes if all have voted
-    # if _did_all_vote() == TRUE:
-    #     let (playerToVoteOff) = _get_player_to_vote_off()
-    #     players.write(
-    # end
+#     # count votes if all have voted
+#     # if _did_all_vote() == TRUE:
+#     #     let (playerToVoteOff) = _get_player_to_vote_off()
+#     #     players.write(
+#     # end
 
-    return ()
-end
+#     return ()
+# end
 
-func _did_all_vote{
-    syscall_ptr : felt*,
-    pedersen_ptr : HashBuiltin*,
-    range_check_ptr,
-}() -> (
-    allVoted : felt
-):
-    let (players) = view_players()
-    let (player0Vote) = votes.read(players[0].address)
-    let (player1Vote) = votes.read(players[1].address)
-    let (player2Vote) = votes.read(players[2].address)
-    let (player3Vote) = votes.read(players[3].address)
-    return (FALSE)
-end
+# func _did_all_vote{
+#     syscall_ptr : felt*,
+#     pedersen_ptr : HashBuiltin*,
+#     range_check_ptr,
+# }() -> (
+#     allVoted : felt
+# ):
+#     let (players) = view_players()
+#     let (player0Vote) = votes.read(players[0].address)
+#     let (player1Vote) = votes.read(players[1].address)
+#     let (player2Vote) = votes.read(players[2].address)
+#     let (player3Vote) = votes.read(players[3].address)
+#     return (FALSE)
+# end
 
 @external
 func end_round{

@@ -168,15 +168,15 @@ async def test_fails_end_round(started_game):
     with pytest.raises(Exception):
       await contract.end_round().invoke()
 
-@pytest.mark.asyncio
-async def test_success_call_vote(started_game):
-    contract = started_game
+# @pytest.mark.asyncio
+# async def test_success_call_vote(started_game):
+#     contract = started_game
 
-    await contract.call_vote(PLAYER1).invoke()
+#     await contract.call_vote(PLAYER1).invoke()
 
-    # State changed to voting successfully
-    state = await contract.view_game_state().call()
-    assert state.result.gameState == GAMESTATE_VOTING
+#     # State changed to voting successfully
+#     state = await contract.view_game_state().call()
+#     assert state.result.gameState == GAMESTATE_VOTING
 
 @pytest.mark.asyncio
 async def test_success_realones_win(started_game):
