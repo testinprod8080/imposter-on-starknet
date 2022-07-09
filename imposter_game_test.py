@@ -112,7 +112,7 @@ async def test_fails_call_action_while_not_started(init_contract):
           actionProof=COMPLETETASKMERKLEROOT, 
           actionHash=3, 
           playerProof=1, 
-          playerHash=1
+          playerAddr=1
         ).invoke()
 
 @pytest.mark.asyncio
@@ -134,7 +134,7 @@ async def test_fails_not_player(started_game):
           actionProof=COMPLETETASKMERKLEROOT, 
           actionHash=3, 
           playerProof=1, 
-          playerHash=1
+          playerAddr=1
         ).invoke()
 
 @pytest.mark.asyncio
@@ -148,7 +148,7 @@ async def test_fails_invalid_action_type(started_game):
           actionProof=COMPLETETASKMERKLEROOT, 
           actionHash=3, 
           playerProof=REALONESMERKLEROOT, 
-          playerHash=PLAYER3
+          playerAddr=PLAYER3
         ).invoke()
 
 @pytest.mark.asyncio
@@ -161,7 +161,7 @@ async def test_fails_end_round(started_game):
         actionProof=COMPLETETASKMERKLEROOT, 
         actionHash=3, 
         playerProof=REALONESMERKLEROOT, 
-        playerHash=PLAYER3
+        playerAddr=PLAYER3
       ).invoke()
 
     # Ending round fails when not all players have submitted an action
@@ -192,7 +192,7 @@ async def test_success_realones_win(started_game):
         actionProof=COMPLETETASKMERKLEROOT, 
         actionHash=3, 
         playerProof=REALONESMERKLEROOT, 
-        playerHash=PLAYER3
+        playerAddr=PLAYER3
       ).invoke()
 
     # Complete task to add 1 pt
@@ -201,7 +201,7 @@ async def test_success_realones_win(started_game):
         actionProof=COMPLETETASKMERKLEROOT, 
         actionHash=3, 
         playerProof=REALONESMERKLEROOT, 
-        playerHash=PLAYER2
+        playerAddr=PLAYER2
       ).invoke()
 
     # Complete task to add 1 pt
@@ -210,7 +210,7 @@ async def test_success_realones_win(started_game):
         actionProof=COMPLETETASKMERKLEROOT, 
         actionHash=3, 
         playerProof=REALONESMERKLEROOT, 
-        playerHash=PLAYER4
+        playerAddr=PLAYER4
       ).invoke()
 
     # Imposter pretends to complete task, should not add points
@@ -219,7 +219,7 @@ async def test_success_realones_win(started_game):
         actionProof=COMPLETETASKMERKLEROOT, 
         actionHash=3, 
         playerProof=1, 
-        playerHash=PLAYER1
+        playerAddr=PLAYER1
       ).invoke()
 
     # Check actions
@@ -248,7 +248,7 @@ async def test_success_realones_win(started_game):
         actionProof=COMPLETETASKMERKLEROOT, 
         actionHash=3, 
         playerProof=REALONESMERKLEROOT, 
-        playerHash=PLAYER3
+        playerAddr=PLAYER3
       ).invoke()
 
     # Complete task to add 1 pt
@@ -257,7 +257,7 @@ async def test_success_realones_win(started_game):
         actionProof=COMPLETETASKMERKLEROOT, 
         actionHash=3, 
         playerProof=REALONESMERKLEROOT, 
-        playerHash=PLAYER2
+        playerAddr=PLAYER2
       ).invoke()
 
     # Complete task to add 1 pt
@@ -266,7 +266,7 @@ async def test_success_realones_win(started_game):
         actionProof=DONOTHINGMERKLEROOT, 
         actionHash=3, 
         playerProof=REALONESMERKLEROOT, 
-        playerHash=PLAYER4
+        playerAddr=PLAYER4
       ).invoke()
 
     # Imposter pretends to complete task, should not add points
@@ -275,7 +275,7 @@ async def test_success_realones_win(started_game):
         actionProof=COMPLETETASKMERKLEROOT, 
         actionHash=3, 
         playerProof=1, 
-        playerHash=PLAYER1
+        playerAddr=PLAYER1
       ).invoke()
 
     # Check points did not change before round ended
@@ -304,21 +304,21 @@ async def test_success_imposters_win(started_game):
         actionProof=COMPLETETASKMERKLEROOT, 
         actionHash=3, 
         playerProof=REALONESMERKLEROOT, 
-        playerHash=PLAYER3
+        playerAddr=PLAYER3
       ).invoke()
     await contract.register_action(
         actionType=COMPLETE_TASK_ACTION_TYPE,
         actionProof=COMPLETETASKMERKLEROOT, 
         actionHash=3, 
         playerProof=REALONESMERKLEROOT, 
-        playerHash=PLAYER2
+        playerAddr=PLAYER2
       ).invoke()
     await contract.register_action(
         actionType=COMPLETE_TASK_ACTION_TYPE,
         actionProof=DONOTHINGMERKLEROOT, 
         actionHash=3, 
         playerProof=REALONESMERKLEROOT, 
-        playerHash=PLAYER4
+        playerAddr=PLAYER4
       ).invoke()
     # Imposter kills
     await contract.register_action(
@@ -326,7 +326,7 @@ async def test_success_imposters_win(started_game):
         actionProof=KILLMERKLEROOT, 
         actionHash=3, 
         playerProof=1, 
-        playerHash=PLAYER1
+        playerAddr=PLAYER1
       ).invoke()
     await contract.end_round().invoke()
 
@@ -339,21 +339,21 @@ async def test_success_imposters_win(started_game):
         actionProof=DONOTHINGMERKLEROOT, 
         actionHash=3, 
         playerProof=REALONESMERKLEROOT, 
-        playerHash=PLAYER3
+        playerAddr=PLAYER3
       ).invoke()
     await contract.register_action(
         actionType=COMPLETE_TASK_ACTION_TYPE,
         actionProof=DONOTHINGMERKLEROOT, 
         actionHash=3, 
         playerProof=REALONESMERKLEROOT, 
-        playerHash=PLAYER2
+        playerAddr=PLAYER2
       ).invoke()
     await contract.register_action(
         actionType=COMPLETE_TASK_ACTION_TYPE,
         actionProof=DONOTHINGMERKLEROOT, 
         actionHash=3, 
         playerProof=REALONESMERKLEROOT, 
-        playerHash=PLAYER4
+        playerAddr=PLAYER4
       ).invoke()
     # Imposter kills
     await contract.register_action(
@@ -361,7 +361,7 @@ async def test_success_imposters_win(started_game):
         actionProof=KILLMERKLEROOT, 
         actionHash=3, 
         playerProof=1, 
-        playerHash=PLAYER1
+        playerAddr=PLAYER1
       ).invoke()
     await contract.end_round().invoke()
 
@@ -374,21 +374,21 @@ async def test_success_imposters_win(started_game):
         actionProof=DONOTHINGMERKLEROOT, 
         actionHash=3, 
         playerProof=REALONESMERKLEROOT, 
-        playerHash=PLAYER3
+        playerAddr=PLAYER3
       ).invoke()
     await contract.register_action(
         actionType=COMPLETE_TASK_ACTION_TYPE,
         actionProof=DONOTHINGMERKLEROOT, 
         actionHash=3, 
         playerProof=REALONESMERKLEROOT, 
-        playerHash=PLAYER2
+        playerAddr=PLAYER2
       ).invoke()
     await contract.register_action(
         actionType=COMPLETE_TASK_ACTION_TYPE,
         actionProof=DONOTHINGMERKLEROOT, 
         actionHash=3, 
         playerProof=REALONESMERKLEROOT, 
-        playerHash=PLAYER4
+        playerAddr=PLAYER4
       ).invoke()
     # Imposter kills
     await contract.register_action(
@@ -396,7 +396,7 @@ async def test_success_imposters_win(started_game):
         actionProof=KILLMERKLEROOT, 
         actionHash=3, 
         playerProof=1, 
-        playerHash=PLAYER1
+        playerAddr=PLAYER1
       ).invoke()
     await contract.end_round().invoke()
 

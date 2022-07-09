@@ -66,7 +66,7 @@ struct PlayerAction:
     member actionProof : felt
     member actionHash : felt
     member playerProof : felt
-    member playerHash : felt
+    member playerAddr : felt
 end
 
 struct PlayerInfo:
@@ -294,13 +294,13 @@ func register_action{
     actionProof : felt, 
     actionHash : felt,
     playerProof : felt,
-    playerHash : felt # TODO needs to be replaced by get_caller_address()
+    playerAddr : felt # TODO needs to be replaced by get_caller_address()
 ):
     alloc_locals
     _validate_game_started()
-    _validate_player_joined(playerHash)
+    _validate_player_joined(playerAddr)
     _validate_action_type(actionType)
-    # _validate_player_alive(playerHash)
+    # _validate_player_alive(playerAddr)
 
     # ? Not validating the submitted action can be resolved by setting invalids to be "Do Nothing" actions
     # ? It also opens it up to players submitting invalid actions as a distraction
@@ -317,13 +317,13 @@ func register_action{
     actions.write(
         RoundKey(
             round=currRound, 
-            playerAddr=playerHash),
+            playerAddr=playerAddr),
         PlayerAction(
             actionType=actionType,
             actionProof=actionProof,
             actionHash=actionHash,
             playerProof=playerProof,
-            playerHash=playerHash
+            playerAddr=playerAddr
         )
     )
     return ()
@@ -397,13 +397,13 @@ func _validate_player_joined{
     pedersen_ptr : HashBuiltin*,
     range_check_ptr,
 }(
-    playerHash : felt
+    playerAddr : felt
 ):
     # verify player joined the game
     # TODO switch to using caller address
     # let (caller) = get_caller_address()
     with_attr error_message("You are not part of this game"):
-        let (isPlayer) = _is_player(playerHash)
+        let (isPlayer) = _is_player(playerAddr)
         assert isPlayer = TRUE
     end
 
@@ -415,14 +415,14 @@ func _validate_player_alive{
     pedersen_ptr : HashBuiltin*,
     range_check_ptr,
 }(
-    playerHash : felt
+    playerAddr : felt
 ):
     # verify player is alive
     # TODO switch to using caller address
     # let (caller) = get_caller_address()
     with_attr error_message("You must be alive to perform this task"):
-        let (isPlayer) = _is_player(playerHash)
-        let (index) = _get_player_index(playerHash)
+        let (isPlayer) = _is_player(playerAddr)
+        let (index) = _get_player_index(playerAddr)
         let (player) = players.read(index)
         assert player.state = PlayerStateEnum.ALIVE
     end
@@ -566,7 +566,7 @@ func _do_action{
 }(
     action: PlayerAction
 ):
-    let (isImposter) = _is_imposter(action.playerProof, action.playerHash)
+    let (isImposter) = _is_imposter(action.playerProof, action.playerAddr)
     
     # if action is verified against taskMerkleRoot, add points
     let (isCompleteTask) = _is_complete_task_action(action.actionProof, action.actionHash)
@@ -582,7 +582,7 @@ func _do_action{
     let (isKillAction) = _is_kill_action(action.actionProof, action.actionHash)
     if isKillAction == TRUE:
         if isImposter == TRUE:
-            _kill_random_player(action.playerHash)
+            _kill_random_player(action.playerAddr)
             return ()
         end
         return ()
@@ -662,7 +662,7 @@ func _check_alive_realone{
     
     let (currRound) = current_round.read()
     let (action) = actions.read(RoundKey(currRound, player.address))
-    let (isImposter) = _is_imposter(action.playerProof, action.playerHash)
+    let (isImposter) = _is_imposter(action.playerProof, action.playerAddr)
 
     if isImposter + player.state == 0:
         return (TRUE)
