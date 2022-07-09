@@ -17,10 +17,6 @@ const MIN_PLAYERS = 4
 const MAX_PLAYERS = 4
 const MAX_POINTS = 5
 
-# FEATURE: voting
-# # should be calculated
-# const INIT_MIN_VOTE_TO_KICK = 2
-
 #######
 # ENUMS
 #######
@@ -54,31 +50,10 @@ end
 # STRUCTS
 #########
 
-# FEATURE: enable player movement and location-specific tasks
-# struct LocationTaskMerkleRoots:
-#     member locationRoot : felt
-#     member taskRoot : felt
-# end
-
-# FEATURE: enable player movement and location-specific tasks
-# struct LocationMerkleRoots:
-#     member upperleft : LocationTaskMerkleRoots
-#     member uppermid : LocationTaskMerkleRoots
-#     member upperright : LocationTaskMerkleRoots
-#     member midleft : LocationTaskMerkleRoots
-#     member mid : LocationTaskMerkleRoots
-#     member midright : LocationTaskMerkleRoots
-#     member lowerleft : LocationTaskMerkleRoots
-#     member lowermid : LocationTaskMerkleRoots
-#     member lowerright : LocationTaskMerkleRoots
-# end
-
 struct MerkleRoots:
     member realOnesMerkleRoot : felt
     member taskMerkleRoot : felt
     member killMerkleRoot : felt
-    # FEATURE: enable player movement and location-specific tasks
-    # member locationMerkleRoots : LocationMerkleRoots
 end
 
 struct RoundKey:
@@ -87,8 +62,6 @@ struct RoundKey:
 end
 
 struct PlayerAction:
-    # FEATURE: enable player movement and location-specific tasks
-    # member currentLocationRoot : felt
     member actionType : felt
     member actionProof : felt
     member actionHash : felt
@@ -145,11 +118,6 @@ end
 @storage_var
 func actions(roundKey : RoundKey) -> (action : PlayerAction):
 end
-
-# FEATURE: voting
-# @storage_var
-# func votes(player : felt) -> (vote_info : VoteInfo):
-# end
 
 #############
 # CONSTRUCTOR
@@ -309,8 +277,6 @@ func start_game{
 
     game_state.write(GameStateEnum.STARTED)
     current_round.write(1)
-    # FEATURE: enable player movement and location-specific tasks
-    # _set_start_location_for_all(0, locationMerkleRoots.mid.locationRoot)
     return ()
 end
 
@@ -362,77 +328,6 @@ func register_action{
     )
     return ()
 end
-
-# FEATURE: voting
-# @external
-# func call_vote{
-#     syscall_ptr : felt*,
-#     pedersen_ptr : HashBuiltin*,
-#     range_check_ptr,
-# }(
-#     playerAddr : felt # TODO needs to be replaced by get_caller_address()
-# ):
-#     _validate_game_started()
-#     # let (playerAddr) = get_caller_address()
-#     _validate_player_joined(playerAddr)
-
-#     game_state.write(GameStateEnum.VOTING)
-
-#     return ()
-# end
-
-# FEATURE: voting
-# @external
-# func vote{
-#     syscall_ptr : felt*,
-#     pedersen_ptr : HashBuiltin*,
-#     range_check_ptr,
-# }(
-#     playerAddr : felt, # TODO needs to be replaced by get_caller_address()
-#     playerVoted : felt
-# ):
-#     _validate_game_started()
-#     # let (playerAddr) = get_caller_address()
-#     _validate_player_joined(playerAddr)
-
-#     # consider vote for non-player as a skip 
-#     let (isPlayer) = _is_player(playerVoted)
-#     if isPlayer == TRUE:
-#         # store my vote
-#         let (myVoteCount) = votes.read(playerAddr)
-#         votes.write(playerAddr, VoteInfo(vote_count=myVoteCount.vote_count, voted_for=playerVoted))
-
-#         # apply my vote to player
-#         let (votedFor) = votes.read(playerVoted)
-#         votes.write(playerVoted, VoteInfo(vote_count=votedFor.vote_count + 1, voted_for=votedFor.voted_for))
-
-#         return ()
-#     end
-
-#     # count votes if all have voted
-#     # if _did_all_vote() == TRUE:
-#     #     let (playerToVoteOff) = _get_player_to_vote_off()
-#     #     players.write(
-#     # end
-
-#     return ()
-# end
-
-# FEATURE: voting
-# func _did_all_vote{
-#     syscall_ptr : felt*,
-#     pedersen_ptr : HashBuiltin*,
-#     range_check_ptr,
-# }() -> (
-#     allVoted : felt
-# ):
-#     let (players) = view_players()
-#     let (player0Vote) = votes.read(players[0].address)
-#     let (player1Vote) = votes.read(players[1].address)
-#     let (player2Vote) = votes.read(players[2].address)
-#     let (player3Vote) = votes.read(players[3].address)
-#     return (FALSE)
-# end
 
 @external
 func end_round{
@@ -817,63 +712,3 @@ func _randint{
     random_seed.write(currSeed + 1)
     return (number)
 end
-
-# func _hash2{
-#     pedersen_ptr : HashBuiltin*
-# }(
-#     x, 
-#     y
-# ) -> (
-#     z : felt
-# ):
-#     # Create a copy of the reference and advance hash_ptr.
-#     let hash = pedersen_ptr
-#     let pedersen_ptr = pedersen_ptr + HashBuiltin.SIZE
-#     # Invoke the hash function.
-#     hash.x = x
-#     hash.y = y
-#     # Return the result of the hash.
-#     # The updated pointer is returned automatically.
-#     return (z=hash.result)
-# end
-
-# FEATURE: enable player movement and location-specific tasks
-# # sets start location to mid location
-# func _set_start_location_for_all{
-#     syscall_ptr : felt*,
-#     pedersen_ptr : HashBuiltin*,
-#     range_check_ptr,
-# }(index : felt, locationRoot : felt):
-#     # end if already at last player
-#     if index == MAX_PLAYERS - 1:
-#         return ()
-#     end
-
-#     let (player) = players.read(index)   
-#     if player.address != 0:
-
-#         actions.write(
-#             RoundKey(
-#                 round=1, 
-#                 playerAddr=player),
-#             PlayerAction(
-#                 currentLocationRoot=locationRoot,
-#                 actionType=ActionTypeEnum.DONOTHING,
-#                 actionProof=0,
-#                 actionHash=0,
-#                 playerProof=0,
-#                 playerHash=0
-#             )
-#         )
-#         tempvar syscall_ptr = syscall_ptr
-#         tempvar pedersen_ptr = pedersen_ptr
-#         tempvar range_check_ptr = range_check_ptr
-#     else:
-#         tempvar syscall_ptr = syscall_ptr
-#         tempvar pedersen_ptr = pedersen_ptr
-#         tempvar range_check_ptr = range_check_ptr
-#     end
-#     _set_start_location_for_all(index + 1, locationRoot)
-
-#     return ()
-# end
