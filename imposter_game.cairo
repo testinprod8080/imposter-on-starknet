@@ -37,7 +37,7 @@ struct ActionTypeEnum:
     member MOVE : felt
     member COMPLETETASK : felt
 end
-
+ 
 struct PlayerStateEnum:
     member ALIVE : felt
     member DEAD : felt
