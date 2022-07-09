@@ -17,6 +17,7 @@ const MIN_PLAYERS = 4
 const MAX_PLAYERS = 4
 const MAX_POINTS = 5
 
+# FEATURE: voting
 # # should be calculated
 # const INIT_MIN_VOTE_TO_KICK = 2
 
@@ -145,6 +146,7 @@ end
 func actions(roundKey : RoundKey) -> (action : PlayerAction):
 end
 
+# FEATURE: voting
 # @storage_var
 # func votes(player : felt) -> (vote_info : VoteInfo):
 # end
@@ -361,6 +363,7 @@ func register_action{
     return ()
 end
 
+# FEATURE: voting
 # @external
 # func call_vote{
 #     syscall_ptr : felt*,
@@ -378,6 +381,7 @@ end
 #     return ()
 # end
 
+# FEATURE: voting
 # @external
 # func vote{
 #     syscall_ptr : felt*,
@@ -414,6 +418,7 @@ end
 #     return ()
 # end
 
+# FEATURE: voting
 # func _did_all_vote{
 #     syscall_ptr : felt*,
 #     pedersen_ptr : HashBuiltin*,
