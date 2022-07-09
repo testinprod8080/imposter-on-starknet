@@ -2,6 +2,7 @@
 
 from starkware.cairo.common.cairo_builtins import HashBuiltin, BitwiseBuiltin
 from starkware.cairo.common.bitwise import bitwise_and
+from starkware.cairo.common.hash import hash2
 from starkware.starknet.common.syscalls import get_caller_address
 from starkware.cairo.common.math import assert_lt, assert_le, assert_not_zero, unsigned_div_rem
 from starkware.cairo.common.bool import TRUE, FALSE
@@ -15,6 +16,9 @@ const MIN_PLAYERS = 4
 # TODO make configurable
 const MAX_PLAYERS = 4
 const MAX_POINTS = 5
+
+# should be calculated
+const INIT_MIN_VOTE_TO_KICK = 2
 
 #######
 # ENUMS
@@ -96,6 +100,11 @@ struct PlayerInfo:
     member state : felt
 end
 
+struct VoteInfo:
+    member vote_count : felt
+    member voted_for : felt
+end
+
 ##############
 # STORAGE VARS
 ##############
@@ -134,6 +143,10 @@ end
 
 @storage_var
 func actions(roundKey : RoundKey) -> (action : PlayerAction):
+end
+
+@storage_var
+func votes(player : felt) -> (vote_info : VoteInfo):
 end
 
 #############
@@ -363,6 +376,57 @@ func call_vote{
     game_state.write(GameStateEnum.VOTING)
 
     return ()
+end
+
+@external
+func vote{
+    syscall_ptr : felt*,
+    pedersen_ptr : HashBuiltin*,
+    range_check_ptr,
+}(
+    playerAddr : felt, # TODO needs to be replaced by get_caller_address()
+    playerVoted : felt
+):
+    _validate_game_started()
+    # let (playerAddr) = get_caller_address()
+    _validate_player_joined(playerAddr)
+
+    # consider vote for non-player as a skip 
+    let (isPlayer) = _is_player(playerVoted)
+    if isPlayer == TRUE:
+        # store my vote
+        let (myVoteCount) = votes.read(playerAddr)
+        votes.write(playerAddr, VoteInfo(vote_count=myVoteCount.vote_count, voted_for=playerVoted))
+
+        # apply my vote to player
+        let (votedFor) = votes.read(playerVoted)
+        votes.write(playerVoted, VoteInfo(vote_count=votedFor.vote_count + 1, voted_for=votedFor.voted_for))
+
+        return ()
+    end
+
+    # count votes if all have voted
+    # if _did_all_vote() == TRUE:
+    #     let (playerToVoteOff) = _get_player_to_vote_off()
+    #     players.write(
+    # end
+
+    return ()
+end
+
+func _did_all_vote{
+    syscall_ptr : felt*,
+    pedersen_ptr : HashBuiltin*,
+    range_check_ptr,
+}() -> (
+    allVoted : felt
+):
+    let (players) = view_players()
+    let (player0Vote) = votes.read(players[0].address)
+    let (player1Vote) = votes.read(players[1].address)
+    let (player2Vote) = votes.read(players[2].address)
+    let (player3Vote) = votes.read(players[3].address)
+    return (FALSE)
 end
 
 @external
@@ -742,31 +806,31 @@ func _randint{
 }(max : felt) -> (number : felt):
     alloc_locals
     let (currSeed) = random_seed.read()
-    let (result) = _hash2(x=max * currSeed, y=max + currSeed)
+    let (result) = hash2{hash_ptr=pedersen_ptr}(x=max * currSeed, y=max + currSeed)
     let (result) = bitwise_and(result, 1023)
     let (_, number) = unsigned_div_rem(result, max)
     random_seed.write(currSeed + 1)
     return (number)
 end
 
-func _hash2{
-    pedersen_ptr : HashBuiltin*
-}(
-    x, 
-    y
-) -> (
-    z : felt
-):
-    # Create a copy of the reference and advance hash_ptr.
-    let hash = pedersen_ptr
-    let pedersen_ptr = pedersen_ptr + HashBuiltin.SIZE
-    # Invoke the hash function.
-    hash.x = x
-    hash.y = y
-    # Return the result of the hash.
-    # The updated pointer is returned automatically.
-    return (z=hash.result)
-end
+# func _hash2{
+#     pedersen_ptr : HashBuiltin*
+# }(
+#     x, 
+#     y
+# ) -> (
+#     z : felt
+# ):
+#     # Create a copy of the reference and advance hash_ptr.
+#     let hash = pedersen_ptr
+#     let pedersen_ptr = pedersen_ptr + HashBuiltin.SIZE
+#     # Invoke the hash function.
+#     hash.x = x
+#     hash.y = y
+#     # Return the result of the hash.
+#     # The updated pointer is returned automatically.
+#     return (z=hash.result)
+# end
 
 # FEATURE: enable player movement and location-specific tasks
 # # sets start location to mid location
