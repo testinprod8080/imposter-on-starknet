@@ -3,6 +3,7 @@
 from starkware.cairo.common.cairo_builtins import HashBuiltin
 from starkware.cairo.common.alloc import alloc
 from starkware.cairo.common.hash import hash2
+from starkware.cairo.common.math import assert_le
 
 namespace MerkleTreeHelper:
     # hashes all nodes until it returns a root
@@ -18,7 +19,6 @@ namespace MerkleTreeHelper:
         output_array_len : felt,
         output_array : felt*
     ):  
-        # return (input_array_len, input_array)
         let (output_array : felt*) = alloc()
 
         let (output_array_len, output_array) = create_next_nodes(
@@ -53,6 +53,11 @@ namespace MerkleTreeHelper:
         new_output_array : felt*
     ):
         alloc_locals
+        
+        with_attr error_message("Inputs must have at least a length of two"):
+            assert_le(2, input_array_len)
+        end
+
         local index : felt
         assert index = input_array_len - start
 
