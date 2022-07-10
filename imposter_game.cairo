@@ -6,6 +6,9 @@ from starkware.cairo.common.hash import hash2
 from starkware.starknet.common.syscalls import get_caller_address
 from starkware.cairo.common.math import assert_lt, assert_le, assert_not_zero, unsigned_div_rem
 from starkware.cairo.common.bool import TRUE, FALSE
+from starkware.cairo.common.alloc import alloc
+
+from merkle_tree_helper import MerkleTreeHelper
 
 ###########
 # CONSTANTS
@@ -228,7 +231,7 @@ func join_game{
     pedersen_ptr : HashBuiltin*,
     range_check_ptr,
 }(
-    saltedHashAddress : felt, 
+    playerAddr : felt, 
     index : felt
 ):
     _validate_pre_game_actions()
@@ -241,9 +244,9 @@ func join_game{
     let (player) = players.read(index)
     if player.address != 0:
         # call recursively to iterate through array to find empty slot
-        join_game(saltedHashAddress, index + 1)
+        join_game(playerAddr, index + 1)
     else:
-        players.write(index, PlayerInfo(address=saltedHashAddress, state=PlayerStateEnum.ALIVE))
+        players.write(index, PlayerInfo(address=playerAddr, state=PlayerStateEnum.ALIVE))
         player_count.write(count + 1)
     end
 
@@ -266,6 +269,8 @@ func start_game{
     with_attr error_message("Not enough players. Only {count} players have joined"):
         assert_le(MIN_PLAYERS, count)
     end
+
+    # generate merkle
 
     merkle_roots.write(
         MerkleRoots(
@@ -507,6 +512,25 @@ func _merkle_verify(
     else:
         return (FALSE)
     end
+end
+
+func _generate_merkle_root{
+    syscall_ptr : felt*,
+    pedersen_ptr : HashBuiltin*,
+    range_check_ptr,
+}() -> (root_len : felt, root : felt*):
+    let (caller) = get_caller_address()
+    _validate_player_joined(caller)
+
+    let (players) = view_players()
+    let (leaves : felt*) = alloc()
+    leaves[0] = players[0].address
+    leaves[1] = players[1].address
+    leaves[2] = players[2].address
+    leaves[3] = players[3].address
+
+    let (root_len, root_array) = MerkleTreeHelper.get_root(4, leaves)
+    return (root_len, root_array)
 end
 
 func _is_imposter{

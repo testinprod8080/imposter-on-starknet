@@ -63,10 +63,10 @@ async def init_contract(init_starknet):
 
 @pytest_asyncio.fixture
 async def join_all_players(init_contract):
-    await init_contract.join_game(saltedHashAddress=PLAYER1, index=0).invoke()
-    await init_contract.join_game(saltedHashAddress=PLAYER2, index=1).invoke()
-    await init_contract.join_game(saltedHashAddress=PLAYER3, index=0).invoke()
-    await init_contract.join_game(saltedHashAddress=PLAYER4, index=3).invoke()
+    await init_contract.join_game(playerAddr=PLAYER1, index=0).invoke()
+    await init_contract.join_game(playerAddr=PLAYER2, index=1).invoke()
+    await init_contract.join_game(playerAddr=PLAYER3, index=2).invoke()
+    await init_contract.join_game(playerAddr=PLAYER4, index=3).invoke()
     return init_contract
 
 @pytest_asyncio.fixture
@@ -80,16 +80,16 @@ async def started_game(join_all_players):
 
 ############
 # TEST CASES
-############
+############# 
 
 @pytest.mark.asyncio
 async def test_fails_not_enough_players(init_contract):
     contract = init_contract
 
     # Join the game
-    await contract.join_game(saltedHashAddress=PLAYER1, index=0).invoke()
-    await contract.join_game(saltedHashAddress=PLAYER2, index=1).invoke()
-    await contract.join_game(saltedHashAddress=PLAYER3, index=0).invoke()
+    await contract.join_game(playerAddr=PLAYER1, index=0).invoke()
+    await contract.join_game(playerAddr=PLAYER2, index=1).invoke()
+    await contract.join_game(playerAddr=PLAYER3, index=0).invoke()
 
     # Start the game
     with pytest.raises(Exception):
@@ -103,7 +103,7 @@ async def test_fails_call_action_while_not_started(init_contract):
     contract = init_contract
 
     # Join the game
-    await contract.join_game(saltedHashAddress=PLAYER1, index=0).invoke()
+    await contract.join_game(playerAddr=PLAYER1, index=0).invoke()
 
     # Start the game
     with pytest.raises(Exception):
@@ -121,7 +121,7 @@ async def test_fails_too_many_players(join_all_players):
 
     # Join the game
     with pytest.raises(Exception): 
-      await contract.join_game(saltedHashAddress=0x123, index=4).invoke()
+      await contract.join_game(playerAddr=0x123, index=4).invoke()
 
 @pytest.mark.asyncio
 async def test_fails_not_player(started_game):
